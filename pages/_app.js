@@ -1,18 +1,10 @@
-import 'nextra-theme-blog/style.css'
 import Head from 'next/head'
-
 import '../styles/main.css'
 
-export default function Nextra({ Component, pageProps }) {
+export default function App({ Component, pageProps }) {
   return (
     <>
       <Head>
-        <link
-          rel="alternate"
-          type="application/rss+xml"
-          title="RSS"
-          href="/feed.xml"
-        />
         <link
           rel="preload"
           href="/fonts/Inter-roman.latin.var.woff2"
@@ -20,6 +12,7 @@ export default function Nextra({ Component, pageProps }) {
           type="font/woff2"
           crossOrigin="anonymous"
         />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <Component {...pageProps} />
     </>
