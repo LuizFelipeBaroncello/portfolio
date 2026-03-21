@@ -1,29 +1,22 @@
-export default function FilterBar({
-    filters,
-    activeFilters,
-    onToggleFilter,
-    locked,
-    onToggleLockdown,
-}) {
-    return (
-        <div className="filter-bar">
-            {filters.map((filter) => (
-                <button
-                    key={filter}
-                    className={`filter-tag ${activeFilters.includes(filter) ? 'active' : ''
-                        }`}
-                    onClick={() => onToggleFilter(filter)}
-                >
-                    {filter}
-                </button>
-            ))}
-            <button
-                className={`lockdown-btn ${locked ? 'locked' : ''}`}
-                onClick={onToggleLockdown}
-            >
-                <span className="lockdown-icon">{locked ? '🔒' : '🔓'}</span>
-                {locked ? 'Locked' : 'Toggle Lockdown'}
-            </button>
-        </div>
-    )
+import ThemeToggle from './ThemeToggle'
+
+export default function FilterBar({ filters, activeFilter, onSetFilter, theme, onToggleTheme }) {
+  return (
+    <div className="filter-bar-wrapper">
+      <div className="filter-bar">
+        {filters.map((filter) => (
+          <button
+            key={filter}
+            className={`filter-tag${activeFilter === filter ? ' active' : ''}`}
+            onClick={() => onSetFilter(filter)}
+          >
+            {filter}
+          </button>
+        ))}
+      </div>
+      <div className="filter-bar-right">
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+      </div>
+    </div>
+  )
 }

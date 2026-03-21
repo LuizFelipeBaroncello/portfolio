@@ -5,32 +5,19 @@ class MyDocument extends Document {
     return (
       <Html lang="en">
         <Head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(){try{var t=localStorage.getItem('theme');if(!t){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`,
+            }}
+          />
           <meta name="robots" content="follow, index" />
-          <meta
-            name="description"
-            content="Developer and Product Designer from Brazil."
-          />
-          <meta
-            property="og:site_name"
-            content="Luiz Felipe Baroncello — Developer, Designer"
-          />
-          <meta
-            property="og:description"
-            content="Developer and Product Designer from Brazil."
-          />
-          <meta
-            property="og:title"
-            content="Luiz Felipe Baroncello — Developer, Designer"
-          />
+          <meta name="description" content="Developer and Product Designer from Brazil." />
+          <meta property="og:site_name" content="Luiz Felipe Baroncello — Developer, Designer" />
+          <meta property="og:description" content="Developer and Product Designer from Brazil." />
+          <meta property="og:title" content="Luiz Felipe Baroncello — Developer, Designer" />
           <meta name="twitter:card" content="summary_large_image" />
-          <meta
-            name="twitter:title"
-            content="Luiz Felipe Baroncello — Developer, Designer"
-          />
-          <meta
-            name="twitter:description"
-            content="Developer and Product Designer from Brazil."
-          />
+          <meta name="twitter:title" content="Luiz Felipe Baroncello — Developer, Designer" />
+          <meta name="twitter:description" content="Developer and Product Designer from Brazil." />
         </Head>
         <body>
           <Main />
