@@ -190,7 +190,7 @@ export default function Home() {
                   Twitter / X
                 </a>
                 <a
-                  href="https://linkedin.com"
+                  href="https://www.linkedin.com/in/luiz-felipe-ribeiro-baroncello-aa3825159/"
                   className="social-link"
                   onMouseDown={(e) => e.stopPropagation()}
                   target="_blank"
@@ -211,12 +211,12 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Luiz Felipe Baroncello — Developer, Designer</title>
+        <title>Luiz Felipe Baroncello — Software Engineer</title>
       </Head>
       <div className="page-container">
         <header className="header">
-          <span className="header-logo">lfb</span>
-          <a href="mailto:luizfelipe@example.com" className="contact-link">
+          <span className="header-logo">LFRB</span>
+          <a href="mailto:luizfelipe_rv97@hotmail.com" className="contact-link">
             Contact
           </a>
         </header>

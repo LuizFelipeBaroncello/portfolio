@@ -10,11 +10,12 @@ export default function BioCard({ locked, onToggleLockdown, isFiltered }) {
             onMouseDown={(e) => e.stopPropagation()}
           />
           <p className="bio-intro">
-            I&apos;m <strong className="bio-name">Luiz Felipe</strong>, a developer
-            and product designer from Brazil. I&apos;m interested in{' '}
-            <strong>React</strong>, <strong>Node</strong>,{' '}
-            <strong>Product Design</strong>, <strong>Next.js</strong>,{' '}
-            <strong>Startups</strong> and <strong>Front-end</strong>.
+            I&apos;m <strong className="bio-name">Luiz Felipe</strong>, a Software
+            Engineer from Santa Catarina, Brazil. Currently at{' '}
+            <strong>Mercado Livre</strong>. Experienced with{' '}
+            <strong>Java</strong>, <strong>Spring</strong>,{' '}
+            <strong>React</strong>, <strong>Microservices</strong>{' '}
+            and <strong>Cloud</strong>.
           </p>
           <button
             className={`lockdown-btn${locked ? ' locked' : ''}`}

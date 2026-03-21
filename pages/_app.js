@@ -2,6 +2,7 @@ import Head from 'next/head'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import '../styles/main.css'
+import '../styles/ev-stats.css'
 
 export default function App({ Component, pageProps }) {
   return (
