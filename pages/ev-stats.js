@@ -8,8 +8,11 @@ const CATEGORIES = [
   { key: 'tag_estacionamento', label: 'Tag / Estacionamento', icon: '🅿️', color: 'purple' },
   { key: 'limpeza', label: 'Limpeza', icon: '✨', color: 'teal' },
   { key: 'documentos_seguro', label: 'Documentos / Seguro', icon: '📄', color: 'orange' },
-  { key: 'outros', label: 'Outros', icon: '📦', color: 'pink' }
+  { key: 'outros', label: 'Outros', icon: '📦', color: 'pink' },
+  { key: 'quilometragem', label: 'Quilometragem', icon: '🛣️', color: 'cyan', unit: 'km' }
 ]
+
+const COST_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'quilometragem')
 
 const COLOR_MAP = {
   blue: '#4a9eff',
@@ -17,8 +20,17 @@ const COLOR_MAP = {
   purple: '#a78bfa',
   teal: '#6ed2b7',
   orange: '#fb923c',
-  pink: '#f472b6'
+  pink: '#f472b6',
+  cyan: '#22d3ee'
 }
+
+const MILEAGE_KNOWN_POINTS = [
+  { mes: '2024-03', km: 0 },
+  { mes: '2025-01', km: 17000 },
+  { mes: '2025-03', km: 23000 },
+  { mes: '2025-08', km: 35000 },
+  { mes: '2026-03', km: 42000 },
+]
 
 const PERIODS = [
   { key: 'diaria', label: 'Diaria', suffix: 'por dia' },
@@ -33,6 +45,23 @@ function formatBRL(value) {
     style: 'currency',
     currency: 'BRL'
   }).format(value)
+}
+
+function formatKM(value) {
+  return new Intl.NumberFormat('pt-BR').format(Math.round(value)) + ' km'
+}
+
+function formatCatValue(cat, value) {
+  return cat.unit === 'km' ? formatKM(value) : formatBRL(value)
+}
+
+function formatCatValueCompact(cat, value) {
+  if (cat.unit === 'km') {
+    if (value >= 1000) return `${(value / 1000).toFixed(1)}k km`
+    return `${Math.round(value)} km`
+  }
+  if (value >= 1000) return `R$ ${(value / 1000).toFixed(1)}k`
+  return `R$ ${Math.round(value)}`
 }
 
 function formatMonth(mes) {
@@ -69,6 +98,56 @@ function formatBRLCompact(value) {
     return `R$ ${(value / 1000).toFixed(1)}k`
   }
   return `R$ ${Math.round(value)}`
+}
+
+function toMonthIndex(mes) {
+  const [y, m] = mes.split('-').map(Number)
+  return y * 12 + m
+}
+
+function interpolateMileage(months) {
+  if (months.length === 0) return []
+
+  const known = MILEAGE_KNOWN_POINTS.map((p) => ({ idx: toMonthIndex(p.mes), km: p.km }))
+  const result = []
+  for (let i = 0; i < months.length; i++) {
+    const mi = toMonthIndex(months[i])
+    let km
+
+    let before = null
+    let after = null
+    for (const kp of known) {
+      if (kp.idx <= mi) {
+        if (!before || kp.idx > before.idx) before = kp
+      }
+      if (kp.idx >= mi) {
+        if (!after || kp.idx < after.idx) after = kp
+      }
+    }
+
+    if (before && after && before.idx === after.idx) {
+      km = before.km
+    } else if (before && after) {
+      const t = (mi - before.idx) / (after.idx - before.idx)
+      km = before.km + (after.km - before.km) * t
+    } else if (before) {
+      const prev = known[known.length - 2]
+      const last = known[known.length - 1]
+      const rate = (last.km - prev.km) / (last.idx - prev.idx)
+      km = last.km + rate * (mi - last.idx)
+    } else if (after) {
+      const first = known[0]
+      const second = known[1]
+      const rate = (second.km - first.km) / (second.idx - first.idx)
+      km = first.km + rate * (mi - first.idx)
+    } else {
+      km = 0
+    }
+
+    result.push(Math.max(0, Math.round(km)))
+  }
+
+  return result
 }
 
 // ─── SVG Chart ───
@@ -115,10 +194,10 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
     return { key: cat.key, color: COLOR_MAP[cat.color], points, areaPoints }
   })
 
-  // Total line
+  // Total line (cost categories only)
   const totalPoints = data
     .map((row, i) => {
-      const total = CATEGORIES.reduce(
+      const total = COST_CATEGORIES.reduce(
         (sum, c) => sum + (visibleCats.has(c.key) ? row[c.key] : 0),
         0
       )
@@ -128,7 +207,7 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
 
   const totalMax = Math.max(
     ...data.map((row) =>
-      CATEGORIES.reduce((s, c) => s + (visibleCats.has(c.key) ? row[c.key] : 0), 0)
+      COST_CATEGORIES.reduce((s, c) => s + (visibleCats.has(c.key) ? row[c.key] : 0), 0)
     )
   )
   // Rescale if total exceeds max
@@ -153,7 +232,7 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
 
   const adjTotalPoints = data
     .map((row, i) => {
-      const total = CATEGORIES.reduce(
+      const total = COST_CATEGORIES.reduce(
         (sum, c) => sum + (visibleCats.has(c.key) ? row[c.key] : 0),
         0
       )
@@ -163,6 +242,8 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
 
   // X-axis labels (show every N labels to avoid overlap)
   const labelEvery = Math.max(1, Math.ceil(data.length / 12))
+
+  const visibleCostCats = COST_CATEGORIES.filter((c) => visibleCats.has(c.key))
 
   return (
     <div className="ev-chart-wrap">
@@ -202,8 +283,8 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
           />
         ))}
 
-        {/* Total dashed line */}
-        {visibleCats.size > 1 && (
+        {/* Total dashed line (cost categories only) */}
+        {visibleCostCats.length > 1 && (
           <polyline
             className="ev-chart-line ev-chart-line-total"
             points={adjTotalPoints}
@@ -269,7 +350,7 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
 }
 
 // ─── Tooltip ───
-function ChartTooltip({ data, index, visibleCats, chartRef }) {
+function ChartTooltip({ data, index, visibleCats }) {
   if (index === null || !data[index]) return null
   const row = data[index]
 
@@ -280,14 +361,14 @@ function ChartTooltip({ data, index, visibleCats, chartRef }) {
         <div key={cat.key} className="ev-tooltip-row">
           <span className={`ev-tooltip-dot ${cat.color}`} />
           <span className="ev-tooltip-label">{cat.label}</span>
-          <span className="ev-tooltip-value">{formatBRL(row[cat.key])}</span>
+          <span className="ev-tooltip-value">{formatCatValue(cat, row[cat.key])}</span>
         </div>
       ))}
       <div className="ev-tooltip-row ev-tooltip-total">
-        <span className="ev-tooltip-label">Total</span>
+        <span className="ev-tooltip-label">Total Custos</span>
         <span className="ev-tooltip-value">
           {formatBRL(
-            CATEGORIES.reduce((s, c) => s + (visibleCats.has(c.key) ? row[c.key] : 0), 0)
+            COST_CATEGORIES.reduce((s, c) => s + (visibleCats.has(c.key) ? row[c.key] : 0), 0)
           )}
         </span>
       </div>
@@ -336,7 +417,7 @@ export default function EVStats() {
     localStorage.setItem('ev-period', p)
   }, [])
 
-  // Fetch data
+  // Fetch data and merge mileage
   useEffect(() => {
     fetch('/api/ev-stats')
       .then((r) => {
@@ -344,7 +425,13 @@ export default function EVStats() {
         return r.json()
       })
       .then((d) => {
-        setData(d)
+        const months = d.map((row) => row.mes)
+        const mileageValues = interpolateMileage(months)
+        const merged = d.map((row, i) => ({
+          ...row,
+          quilometragem: mileageValues[i] || 0,
+        }))
+        setData(merged)
         setLoading(false)
       })
       .catch((e) => {
@@ -376,13 +463,17 @@ export default function EVStats() {
       acc[cat.key] = 0
     })
     for (const row of data) {
-      for (const cat of CATEGORIES) {
+      for (const cat of COST_CATEGORIES) {
         acc[cat.key] += row[cat.key] || 0
       }
-      acc.total += CATEGORIES.reduce(
+      acc.total += COST_CATEGORIES.reduce(
         (s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0),
         0
       )
+    }
+    // Quilometragem total = last month's cumulative value
+    if (data.length > 0) {
+      acc.quilometragem = data[data.length - 1].quilometragem || 0
     }
     return acc
   }, [data, visibleCats])
@@ -390,7 +481,7 @@ export default function EVStats() {
   const visibleTotal = useMemo(() => {
     return data.reduce(
       (sum, row) =>
-        sum + CATEGORIES.reduce((s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0), 0),
+        sum + COST_CATEGORIES.reduce((s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0), 0),
       0
     )
   }, [data, visibleCats])
@@ -502,7 +593,9 @@ export default function EVStats() {
                   const val = totals[cat.key] || 0
                   const allTotal = CATEGORIES.reduce((s, c) => s + (totals[c.key] || 0), 0)
                   const pct = allTotal > 0 ? (val / allTotal) * 100 : 0
-                  const avg = val / divisor
+                  const avg = cat.unit === 'km'
+                    ? (data.length > 0 ? val / data.length : 0)
+                    : val / divisor
                   const isVisible = visibleCats.has(cat.key)
                   return (
                     <div
@@ -517,7 +610,7 @@ export default function EVStats() {
                         <span className="ev-cat-icon">{cat.icon}</span>
                         <span className="ev-cat-label">{cat.label}</span>
                       </div>
-                      <span className="ev-cat-value">{formatBRL(val)}</span>
+                      <span className="ev-cat-value">{formatCatValue(cat, val)}</span>
                       <div className="ev-cat-bar-track">
                         <div
                           className={`ev-cat-bar-fill ${cat.color}`}
@@ -527,7 +620,7 @@ export default function EVStats() {
                       <div className="ev-cat-footer">
                         <span className="ev-cat-pct">{pct.toFixed(1)}%</span>
                         <span className="ev-cat-avg">
-                          {formatBRL(avg)} {currentPeriod?.suffix}
+                          {formatCatValue(cat, avg)} {cat.unit === 'km' ? 'por mes' : currentPeriod?.suffix}
                         </span>
                       </div>
                     </div>
@@ -592,13 +685,18 @@ export default function EVStats() {
                                 key={cat.key}
                                 className={`ev-month-segment ${cat.color}`}
                                 style={{ width: `${catPct}%` }}
-                                title={`${cat.label}: ${formatBRL(catVal)}`}
+                                title={`${cat.label}: ${formatCatValue(cat, catVal)}`}
                               />
                             )
                           })}
                         </div>
                       </div>
-                      <span className="ev-month-value">{formatBRL(total)}</span>
+                      <span className="ev-month-value">{formatBRL(
+                        COST_CATEGORIES.reduce(
+                          (s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0),
+                          0
+                        )
+                      )}</span>
                     </div>
                   )
                 })}
@@ -624,7 +722,7 @@ export default function EVStats() {
                   </thead>
                   <tbody>
                     {[...data].reverse().map((row) => {
-                      const total = CATEGORIES.reduce(
+                      const total = COST_CATEGORIES.reduce(
                         (s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0),
                         0
                       )
@@ -632,7 +730,7 @@ export default function EVStats() {
                         <tr key={row.mes}>
                           <td className="ev-td-month">{formatMonth(row.mes)}</td>
                           {CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => (
-                            <td key={cat.key}>{formatBRL(row[cat.key] || 0)}</td>
+                            <td key={cat.key}>{formatCatValue(cat, row[cat.key] || 0)}</td>
                           ))}
                           <td className="ev-td-total">{formatBRL(total)}</td>
                         </tr>
