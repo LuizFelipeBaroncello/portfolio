@@ -5,9 +5,8 @@ import Card from '../components/Card'
 import FilterBar from '../components/FilterBar'
 import BioCard from '../components/BioCard'
 import MapCard from '../components/MapCard'
-import TwitterCard from '../components/TwitterCard'
+import LinkedInCard from '../components/LinkedInCard'
 import MusicCard from '../components/MusicCard'
-import NewsletterCard from '../components/NewsletterCard'
 import { useTheme } from '../lib/use-theme'
 import { CARDS_DATA, CATEGORY_FILTERS, GRID_LAYOUTS } from '../lib/cards-data'
 
@@ -15,9 +14,9 @@ const ResponsiveGridLayout = dynamic(() => import('../components/BentoGrid'), { 
 
 const FILTER_MAP = {
   All: () => true,
-  About: (card) => ['bio', 'map', 'social', 'twitter'].includes(card.id),
+  About: (card) => ['bio', 'map', 'social', 'linkedin'].includes(card.id),
   Projects: (card) => card.type === 'project',
-  Media: (card) => ['music', 'blog', 'newsletter'].includes(card.id),
+  Media: (card) => ['music', 'blog'].includes(card.id),
 }
 
 export default function Home() {
@@ -104,12 +103,10 @@ export default function Home() {
         )
       case 'map':
         return <MapCard key={card.id} isFiltered={filtered} />
-      case 'twitter':
-        return <TwitterCard key={card.id} isFiltered={filtered} />
+      case 'linkedin':
+        return <LinkedInCard key={card.id} isFiltered={filtered} />
       case 'music':
         return <MusicCard key={card.id} isFiltered={filtered} />
-      case 'newsletter':
-        return <NewsletterCard key={card.id} isFiltered={filtered} />
       case 'project':
         return (
           <Card key={card.id} className="project-card" isFiltered={filtered} accent={card.accent}>

@@ -520,25 +520,25 @@ a {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
-/* ===== Twitter Card ===== */
-.twitter-card {
-  background: #1a9af0;
-  border-color: #1a9af0;
+/* ===== LinkedIn Card ===== */
+.linkedin-card {
+  background: #0a66c2;
+  border-color: #0a66c2;
 }
 
-.twitter-card .card-inner {
+.linkedin-card .card-inner {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100%;
 }
 
-.twitter-card .twitter-icon {
+.linkedin-card .linkedin-icon {
   color: white;
   opacity: 0.9;
 }
 
-.twitter-card .twitter-icon svg {
+.linkedin-card .linkedin-icon svg {
   width: 60px;
   height: 60px;
 }
@@ -637,81 +637,6 @@ a {
 }
 
 .blog-card .read-more:hover { gap: 10px; }
-
-/* ===== Newsletter Card ===== */
-.newsletter-card {
-  background: linear-gradient(
-    135deg,
-    var(--bg-card) 0%,
-    color-mix(in srgb, var(--accent-purple) 8%, var(--bg-card)) 100%
-  );
-}
-
-.newsletter-card .newsletter-title {
-  font-size: 17px;
-  font-variation-settings: 'wght' 700;
-  margin-bottom: 6px;
-  letter-spacing: -0.02em;
-}
-
-.newsletter-card .newsletter-desc {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 14px;
-  flex: 1;
-}
-
-.newsletter-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.newsletter-input {
-  width: 100%;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 13px;
-  font-family: var(--font-main);
-  outline: none;
-  transition: border-color var(--transition-fast);
-}
-
-[data-theme='light'] .newsletter-input {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.newsletter-input::placeholder { color: var(--text-muted); }
-.newsletter-input:focus { border-color: var(--accent-purple); }
-
-.newsletter-submit {
-  width: 100%;
-  padding: 10px 20px;
-  background: var(--accent-purple);
-  border: none;
-  border-radius: var(--radius-sm);
-  color: white;
-  font-size: 13px;
-  font-family: var(--font-main);
-  font-variation-settings: 'wght' 600;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.newsletter-submit:hover {
-  background: #9171f0;
-  transform: translateY(-1px);
-}
-
-.newsletter-count {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 10px;
-}
 
 /* ===== Social Card ===== */
 .social-links {
