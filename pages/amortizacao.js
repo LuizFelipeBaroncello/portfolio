@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import Head from 'next/head'
 import { useTheme } from '../lib/use-theme'
 
@@ -31,6 +31,10 @@ function generateSchedule({ loanAmount, startDate, system, interestRate, rateTyp
   const monthlyRate = toMonthlyRate(interestRate, rateType)
   const correctionMonthlyRate = correction.enabled ? toMonthlyRate(correction.rate, correction.rateType) : 0
 
+  // FGTS plans
+  const fgtsParcela = plans.filter(p => p.type === 'fgts_parcela')
+  const fgtsSaldo = plans.filter(p => p.type === 'fgts_saldo')
+
   const schedule = []
   let balance = loanAmount
 
@@ -57,9 +61,11 @@ function generateSchedule({ loanAmount, startDate, system, interestRate, rateTyp
       baseAmort = pricePayment - interest
     }
 
-    // Extra payments from plans
+    // Extra payments from plans (excluding FGTS parcela)
     let extraPayment = 0
+    let fgtsSaldoAmount = 0
     for (const plan of plans) {
+      if (plan.type === 'fgts_parcela' || plan.type === 'fgts_saldo') continue
       if (plan.type === 'unico' && i === plan.month) {
         extraPayment += plan.amount
       } else if (plan.type === 'mensal') {
@@ -68,6 +74,18 @@ function generateSchedule({ loanAmount, startDate, system, interestRate, rateTyp
         extraPayment += plan.amount
       }
     }
+
+    // FGTS Saldo: abate do saldo devedor no mes especifico (com recorrencia a cada 24 meses)
+    for (const fp of fgtsSaldo) {
+      if (fp.recurring) {
+        if (i >= fp.month && (i - fp.month) % 24 === 0) {
+          fgtsSaldoAmount += fp.amount
+        }
+      } else if (i === fp.month) {
+        fgtsSaldoAmount += fp.amount
+      }
+    }
+    extraPayment += fgtsSaldoAmount
 
     // Insurance
     let insuranceAmount = 0
@@ -79,9 +97,49 @@ function generateSchedule({ loanAmount, startDate, system, interestRate, rateTyp
       }
     }
 
-    // Make sure amortization doesn't exceed balance
-    let totalAmort = Math.min(baseAmort + extraPayment, balance)
-    let payment = interest + totalAmort + insuranceAmount + correctionAmount
+    // Limit base amortization to balance
+    let effectiveBaseAmort = Math.min(baseAmort, balance)
+    // Extra amortization limited to remaining balance after base
+    let effectiveExtra = Math.min(extraPayment, balance - effectiveBaseAmort)
+    let totalAmort = effectiveBaseAmort + effectiveExtra
+
+    // Payment = base installment (without extra amortization)
+    let payment = interest + effectiveBaseAmort + insuranceAmount + correctionAmount
+    // Total = payment + extra amortization
+    let total = payment + effectiveExtra
+
+    // FGTS Parcela: divide equally across 12 months, cap at 80% of base payment (com recorrencia a cada 12 meses)
+    let fgtsDiscount = 0
+    let fgtsAmortExtra = 0
+    for (const fp of fgtsParcela) {
+      let isActive = false
+      if (fp.recurring) {
+        // Recurring: check if month i falls within any 12-month window starting at fp.month, fp.month+12, fp.month+24, etc.
+        if (i >= fp.month) {
+          const elapsed = i - fp.month
+          const cyclePos = elapsed % 12
+          isActive = true // every 12-month cycle
+          // cyclePos is position within the current 12-month window
+          void cyclePos // used implicitly: if i >= fp.month, it's always within some 12-month window
+        }
+      } else {
+        isActive = i >= fp.month && i < fp.month + 12
+      }
+      if (isActive) {
+        const monthlyFgts = fp.amount / 12
+        const maxDiscount = payment * 0.8
+        const discount = Math.min(monthlyFgts, maxDiscount)
+        fgtsDiscount += discount
+        if (fp.amortizeDiscount) {
+          fgtsAmortExtra += discount
+        }
+      }
+    }
+
+    // Add FGTS amort extra (paid out of pocket) to amortization
+    effectiveExtra += Math.min(fgtsAmortExtra, Math.max(balance - totalAmort, 0))
+    totalAmort = effectiveBaseAmort + effectiveExtra
+    total = payment + effectiveExtra
 
     balance = Math.max(balance - totalAmort, 0)
 
@@ -91,16 +149,142 @@ function generateSchedule({ loanAmount, startDate, system, interestRate, rateTyp
       month: i,
       date: paymentDate,
       balance: balance,
-      amortization: totalAmort,
+      amortization: effectiveBaseAmort,
+      extraAmortization: effectiveExtra,
       interest,
       correction: correctionAmount,
       insurance: insuranceAmount,
-      extraPayment: Math.min(extraPayment, totalAmort - (totalAmort - extraPayment > 0 ? totalAmort - extraPayment : 0)),
+      fgtsDiscount,
+      fgtsSaldoAmount: Math.min(fgtsSaldoAmount, effectiveExtra),
       payment,
+      total,
+      totalWithFgts: total - fgtsDiscount,
     })
   }
 
   return schedule
+}
+
+// ─── Investment Calculator ───
+function calculateInvestment({ schedule, baseSchedule, investmentRate, includeMonthly }) {
+  const monthlyRate = investmentRate
+  const fgtsMonthlyRate = toMonthlyRate(3, 'anual') // FGTS rende 3% a.a.
+  const months = baseSchedule.length
+
+  // Separate: investment (extra amortization) vs FGTS (cannot be freely invested)
+  let invested = 0
+  let balance = 0
+  let fgtsInvested = 0
+  let fgtsBalance = 0
+
+  for (let i = 0; i < months; i++) {
+    const extra = schedule[i] ? schedule[i].extraAmortization : 0
+    const fgtsParcelaDiscount = schedule[i] ? schedule[i].fgtsDiscount : 0
+    const fgtsSaldoAmt = schedule[i] ? (schedule[i].fgtsSaldoAmount || 0) : 0
+    const totalFgtsThisMonth = fgtsParcelaDiscount + fgtsSaldoAmt
+
+    // Investment: only extra amortization from pocket (exclude FGTS saldo portion)
+    let monthlyInvestment = extra - fgtsSaldoAmt
+
+    // If includeMonthly: also invest the difference in payment
+    if (includeMonthly && schedule[i] && baseSchedule[i]) {
+      const saving = baseSchedule[i].payment - schedule[i].payment
+      if (saving > 0) monthlyInvestment += saving
+    }
+
+    invested += monthlyInvestment
+    balance = (balance + monthlyInvestment) * (1 + monthlyRate)
+
+    // FGTS (parcela + saldo devedor): rende separado a 3% a.a.
+    fgtsInvested += totalFgtsThisMonth
+    fgtsBalance = (fgtsBalance + totalFgtsThisMonth) * (1 + fgtsMonthlyRate)
+  }
+
+  // Continue compounding for remaining months if schedule ended early
+  const remainingMonths = months - (schedule.length || 0)
+  for (let i = 0; i < remainingMonths; i++) {
+    balance = balance * (1 + monthlyRate)
+    fgtsBalance = fgtsBalance * (1 + fgtsMonthlyRate)
+  }
+
+  return {
+    invested,
+    finalBalance: balance,
+    profit: balance - invested,
+    fgtsInvested,
+    fgtsFinalBalance: fgtsBalance,
+    fgtsProfit: fgtsBalance - fgtsInvested,
+    totalPatrimony: balance + fgtsBalance,
+  }
+}
+
+// ─── Summary Calculator ───
+function calcSummary(schedule, loanAmount) {
+  if (schedule.length === 0) return null
+  return {
+    totalPaid: schedule.reduce((s, r) => s + r.total, 0),
+    totalInterest: schedule.reduce((s, r) => s + r.interest, 0),
+    totalExtra: schedule.reduce((s, r) => s + r.extraAmortization, 0),
+    totalFgts: schedule.reduce((s, r) => s + r.fgtsDiscount, 0),
+    firstPayment: schedule[0].total,
+    lastPayment: schedule[schedule.length - 1].total,
+    lastDate: schedule[schedule.length - 1].date,
+    effectiveInstallments: schedule.length,
+  }
+}
+
+// ─── Compare Chart (Saldo Devedor) ───
+function CompareBalanceChart({ schedules, names }) {
+  if (schedules.every(s => s.length === 0)) return null
+
+  const COLORS = ['var(--accent-blue)', 'var(--accent-orange)', '#22c55e']
+  const W = 800, H = 260, padL = 75, padR = 20, padT = 20, padB = 35
+  const plotW = W - padL - padR
+  const plotH = H - padT - padB
+
+  const maxMonths = Math.max(...schedules.map(s => s.length))
+  const maxBalance = Math.max(...schedules.flatMap(s => s.map(r => r.balance)), 1)
+
+  const getX = (i) => padL + (i / (maxMonths - 1 || 1)) * plotW
+  const getY = (val) => padT + plotH - (val / maxBalance) * plotH
+
+  const gridCount = 4
+  const gridLines = Array.from({ length: gridCount + 1 }, (_, i) => {
+    const val = (maxBalance / gridCount) * i
+    return { y: getY(val), label: val >= 1000 ? `R$ ${(val / 1000).toFixed(0)}k` : `R$ ${Math.round(val)}` }
+  })
+
+  const labelEvery = Math.max(1, Math.ceil(maxMonths / 12))
+
+  return (
+    <div className="am-chart-wrap">
+      <svg className="am-chart-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
+        {gridLines.map((g, i) => (
+          <g key={i}>
+            <line className="am-chart-gridline" x1={padL} y1={g.y} x2={W - padR} y2={g.y} />
+            <text className="am-chart-label-y" x={padL - 8} y={g.y + 4} textAnchor="end">{g.label}</text>
+          </g>
+        ))}
+        {schedules.map((sched, si) => {
+          if (sched.length === 0) return null
+          const points = sched.map((r, i) => `${getX(i)},${getY(r.balance)}`).join(' ')
+          return <polyline key={si} className="am-chart-line" points={points} stroke={COLORS[si]} strokeWidth="2" fill="none" />
+        })}
+        {Array.from({ length: maxMonths }, (_, i) => i).map(i =>
+          i % labelEvery === 0 ? (
+            <text key={i} className="am-chart-label-x" x={getX(i)} y={H - 8} textAnchor="middle">{i + 1}</text>
+          ) : null
+        )}
+      </svg>
+      <div className="am-chart-legend">
+        {names.map((name, i) => (
+          <span key={i} className="am-legend-item">
+            <span className="am-legend-dot" style={{ background: COLORS[i] }} /> {name}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 // ─── SVG Mini Chart ───
@@ -111,7 +295,7 @@ function AmortChart({ schedule }) {
   const plotW = W - padL - padR
   const plotH = H - padT - padB
 
-  const maxPayment = Math.max(...schedule.map(r => r.payment))
+  const maxPayment = Math.max(...schedule.map(r => r.total))
   const maxBalance = Math.max(...schedule.map(r => r.balance), schedule.length > 0 ? schedule[0].amortization + schedule[0].balance : 0)
   const effectiveMax = Math.max(maxPayment, 1)
 
@@ -120,7 +304,7 @@ function AmortChart({ schedule }) {
 
   const interestPoints = schedule.map((r, i) => `${getX(i)},${getY(r.interest)}`).join(' ')
   const amortPoints = schedule.map((r, i) => `${getX(i)},${getY(r.amortization)}`).join(' ')
-  const paymentPoints = schedule.map((r, i) => `${getX(i)},${getY(r.payment)}`).join(' ')
+  const paymentPoints = schedule.map((r, i) => `${getX(i)},${getY(r.total)}`).join(' ')
 
   const interestArea = [
     ...schedule.map((r, i) => `${getX(i)},${getY(r.interest)}`),
@@ -195,16 +379,55 @@ export default function Amortizacao() {
   // Amortization plans
   const [plans, setPlans] = useState([])
   const [showPlanForm, setShowPlanForm] = useState(false)
-  const [newPlan, setNewPlan] = useState({ type: 'mensal', amount: 500, month: 12, frequency: 6 })
+  const [newPlan, setNewPlan] = useState({ type: 'mensal', amount: 500, month: 12, frequency: 6, amortizeDiscount: false, recurring: false })
+  const [editingPlanId, setEditingPlanId] = useState(null)
 
   // Table visibility
   const [showTable, setShowTable] = useState(false)
 
+  // Compare mode
+  const [compareMode, setCompareMode] = useState(false)
+  const [strategies, setStrategies] = useState([
+    { id: 1, name: 'Estrategia 1', plans: [] },
+    { id: 2, name: 'Estrategia 2', plans: [] },
+  ])
+  const [investment, setInvestment] = useState({ enabled: false, rate: 12, rateType: 'anual', includeMonthly: false })
+  const [showCompareTable, setShowCompareTable] = useState(false)
+
   const addPlan = useCallback(() => {
-    setPlans(prev => [...prev, { ...newPlan, id: Date.now() }])
+    // Validate FGTS parcela: no overlap within 12 months (skip if recurring)
+    if (newPlan.type === 'fgts_parcela' && !newPlan.recurring) {
+      const overlap = plans.find(p => p.type === 'fgts_parcela' && p.id !== editingPlanId &&
+        !(newPlan.month >= p.month + 12 || newPlan.month + 12 <= p.month))
+      if (overlap) {
+        alert('Ja existe um FGTS Parcelas ativo nesse periodo. O intervalo minimo e de 12 meses.')
+        return
+      }
+    }
+    // Validate FGTS saldo: minimum 24 months apart (skip if recurring)
+    if (newPlan.type === 'fgts_saldo' && !newPlan.recurring) {
+      const tooClose = plans.find(p => p.type === 'fgts_saldo' && p.id !== editingPlanId &&
+        Math.abs(newPlan.month - p.month) < 24)
+      if (tooClose) {
+        alert('FGTS Saldo Devedor so pode ser usado a cada 24 meses.')
+        return
+      }
+    }
+    if (editingPlanId) {
+      setPlans(prev => prev.map(p => p.id === editingPlanId ? { ...newPlan, id: editingPlanId } : p))
+      setEditingPlanId(null)
+    } else {
+      setPlans(prev => [...prev, { ...newPlan, id: Date.now() }])
+    }
     setShowPlanForm(false)
-    setNewPlan({ type: 'mensal', amount: 500, month: 12, frequency: 6 })
-  }, [newPlan])
+    setNewPlan({ type: 'mensal', amount: 500, month: 12, frequency: 6, amortizeDiscount: false, recurring: false })
+  }, [newPlan, plans, editingPlanId])
+
+  const editPlan = useCallback((plan) => {
+    setNewPlan({ type: plan.type, amount: plan.amount, month: plan.month, frequency: plan.frequency, amortizeDiscount: plan.amortizeDiscount, recurring: plan.recurring || false })
+    setEditingPlanId(plan.id)
+    setShowPlanForm(true)
+  }, [])
 
   const removePlan = useCallback((id) => {
     setPlans(prev => prev.filter(p => p.id !== id))
@@ -229,12 +452,14 @@ export default function Amortizacao() {
   // Summary
   const summary = useMemo(() => {
     if (schedule.length === 0) return null
-    const totalPaid = schedule.reduce((s, r) => s + r.payment, 0)
+    const totalPaid = schedule.reduce((s, r) => s + r.total, 0)
     const totalInterest = schedule.reduce((s, r) => s + r.interest, 0)
     const totalCorrection = schedule.reduce((s, r) => s + r.correction, 0)
     const totalInsurance = schedule.reduce((s, r) => s + r.insurance, 0)
-    const firstPayment = schedule[0].payment
-    const lastPayment = schedule[schedule.length - 1].payment
+    const totalFgts = schedule.reduce((s, r) => s + r.fgtsDiscount, 0)
+    const totalExtra = schedule.reduce((s, r) => s + r.extraAmortization, 0)
+    const firstPayment = schedule[0].total
+    const lastPayment = schedule[schedule.length - 1].total
     const lastDate = schedule[schedule.length - 1].date
     const effectiveInstallments = schedule.length
 
@@ -243,6 +468,8 @@ export default function Amortizacao() {
       totalInterest,
       totalCorrection,
       totalInsurance,
+      totalFgts,
+      totalExtra,
       firstPayment,
       lastPayment,
       lastDate,
@@ -250,8 +477,64 @@ export default function Amortizacao() {
     }
   }, [schedule])
 
+  // Compare mode: generate schedules and summaries for each strategy
+  const baseParams = { loanAmount, startDate, system, interestRate, rateType, installments, correction, insurance }
+  const compareData = useMemo(() => {
+    if (!compareMode || !loanAmount || !installments || !interestRate) return null
+    const baseSchedule = generateSchedule({ ...baseParams, plans: [] })
+    const baseSummary = calcSummary(baseSchedule, loanAmount)
+    const investMonthlyRate = investment.enabled ? toMonthlyRate(investment.rate, investment.rateType) : 0
+
+    const results = strategies.map(strat => {
+      const sched = generateSchedule({ ...baseParams, plans: strat.plans })
+      const summ = calcSummary(sched, loanAmount)
+      const inv = investment.enabled
+        ? calculateInvestment({ schedule: sched, baseSchedule, investmentRate: investMonthlyRate, includeMonthly: investment.includeMonthly })
+        : null
+      return { strategy: strat, schedule: sched, summary: summ, investment: inv }
+    })
+    return { baseSchedule, baseSummary, results }
+  }, [compareMode, loanAmount, startDate, system, interestRate, rateType, installments, correction, insurance, strategies, investment])
+
+  const addStrategy = useCallback(() => {
+    if (strategies.length >= 3) return
+    setStrategies(prev => [...prev, { id: Date.now(), name: `Estrategia ${prev.length + 1}`, plans: [] }])
+  }, [strategies.length])
+
+  const removeStrategy = useCallback((id) => {
+    setStrategies(prev => prev.filter(s => s.id !== id))
+  }, [])
+
+  const updateStrategyName = useCallback((id, name) => {
+    setStrategies(prev => prev.map(s => s.id === id ? { ...s, name } : s))
+  }, [])
+
+  const addPlanToStrategy = useCallback((stratId, plan) => {
+    setStrategies(prev => prev.map(s =>
+      s.id === stratId ? { ...s, plans: [...s.plans, { ...plan, id: Date.now() }] } : s
+    ))
+  }, [])
+
+  const removePlanFromStrategy = useCallback((stratId, planId) => {
+    setStrategies(prev => prev.map(s =>
+      s.id === stratId ? { ...s, plans: s.plans.filter(p => p.id !== planId) } : s
+    ))
+  }, [])
+
+  const updatePlanInStrategy = useCallback((stratId, planId, updatedPlan) => {
+    setStrategies(prev => prev.map(s =>
+      s.id === stratId ? { ...s, plans: s.plans.map(p => p.id === planId ? { ...updatedPlan, id: planId } : p) } : s
+    ))
+  }, [])
+
   const planTypeLabel = (type) => {
-    const map = { unico: 'Pagamento Unico', mensal: 'Pagamento Mensal', periodico: 'Pagamento Periodico' }
+    const map = {
+      unico: 'Pagamento Unico',
+      mensal: 'Pagamento Mensal',
+      periodico: 'Pagamento Periodico',
+      fgts_parcela: 'FGTS - Parcelas',
+      fgts_saldo: 'FGTS - Saldo Devedor',
+    }
     return map[type] || type
   }
 
@@ -259,6 +542,15 @@ export default function Amortizacao() {
     if (plan.type === 'unico') return `${formatBRL(plan.amount)} no mes ${plan.month}`
     if (plan.type === 'mensal') return `${formatBRL(plan.amount)} por mes`
     if (plan.type === 'periodico') return `${formatBRL(plan.amount)} a cada ${plan.frequency} meses`
+    if (plan.type === 'fgts_parcela') {
+      const base = `${formatBRL(plan.amount)} em 12x de ${formatBRL(plan.amount / 12)} a partir do mes ${plan.month} (ate 80%)`
+      const withAmort = plan.amortizeDiscount ? `${base} + amortizacao` : base
+      return plan.recurring ? `${withAmort} (recorrente a cada 12 meses)` : withAmort
+    }
+    if (plan.type === 'fgts_saldo') {
+      const base = `${formatBRL(plan.amount)} abatido do saldo no mes ${plan.month}`
+      return plan.recurring ? `${base} (recorrente a cada 24 meses)` : base
+    }
     return ''
   }
 
@@ -282,6 +574,13 @@ export default function Amortizacao() {
               <h1 className="ev-title">Simulador de Amortizacao</h1>
               <p className="ev-subtitle">Financiamentos SAC e Price</p>
             </div>
+          </div>
+          <div className="am-header-actions">
+            <label className="am-switch">
+              <input type="checkbox" checked={compareMode} onChange={e => setCompareMode(e.target.checked)} />
+              <span className="am-switch-slider" />
+            </label>
+            <span className="am-compare-label">Comparar</span>
           </div>
           <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
             {theme === 'dark' ? (
@@ -439,11 +738,20 @@ export default function Amortizacao() {
           </div>
         </section>
 
-        {/* ─── Amortization Plans ─── */}
+        {/* ─── Normal Mode ─── */}
+        {!compareMode && <>
         <section className="am-section">
           <div className="am-section-header">
             <h2 className="ev-section-title">Plano de Amortizacao Extra</h2>
-            <button className="am-btn am-btn-outline" onClick={() => setShowPlanForm(!showPlanForm)}>
+            <button className="am-btn am-btn-outline" onClick={() => {
+              if (showPlanForm) {
+                setShowPlanForm(false)
+                setEditingPlanId(null)
+                setNewPlan({ type: 'mensal', amount: 500, month: 12, frequency: 6, amortizeDiscount: false, recurring: false })
+              } else {
+                setShowPlanForm(true)
+              }
+            }}>
               {showPlanForm ? 'Cancelar' : '+ Adicionar'}
             </button>
           </div>
@@ -456,8 +764,18 @@ export default function Amortizacao() {
                   <button className={`am-toggle-btn${newPlan.type === 'unico' ? ' active' : ''}`} onClick={() => setNewPlan(p => ({ ...p, type: 'unico' }))}>Unico</button>
                   <button className={`am-toggle-btn${newPlan.type === 'mensal' ? ' active' : ''}`} onClick={() => setNewPlan(p => ({ ...p, type: 'mensal' }))}>Mensal</button>
                   <button className={`am-toggle-btn${newPlan.type === 'periodico' ? ' active' : ''}`} onClick={() => setNewPlan(p => ({ ...p, type: 'periodico' }))}>Periodico</button>
+                  <button className={`am-toggle-btn${newPlan.type === 'fgts_parcela' || newPlan.type === 'fgts_saldo' ? ' active' : ''}`} onClick={() => setNewPlan(p => ({ ...p, type: 'fgts_parcela' }))}>FGTS</button>
                 </div>
               </div>
+              {(newPlan.type === 'fgts_parcela' || newPlan.type === 'fgts_saldo') && (
+                <div className="am-field">
+                  <label className="am-label-sm">Modalidade FGTS</label>
+                  <div className="am-toggle-group am-toggle-small">
+                    <button className={`am-toggle-btn${newPlan.type === 'fgts_parcela' ? ' active' : ''}`} onClick={() => setNewPlan(p => ({ ...p, type: 'fgts_parcela' }))}>Abatimento de Parcelas</button>
+                    <button className={`am-toggle-btn${newPlan.type === 'fgts_saldo' ? ' active' : ''}`} onClick={() => setNewPlan(p => ({ ...p, type: 'fgts_saldo' }))}>Abatimento Saldo Devedor</button>
+                  </div>
+                </div>
+              )}
               <div className="am-plan-form-row">
                 <div className="am-field">
                   <label className="am-label-sm">Valor (R$)</label>
@@ -470,9 +788,9 @@ export default function Amortizacao() {
                     step={100}
                   />
                 </div>
-                {newPlan.type === 'unico' && (
+                {(newPlan.type === 'unico' || newPlan.type === 'fgts_parcela' || newPlan.type === 'fgts_saldo') && (
                   <div className="am-field">
-                    <label className="am-label-sm">No mes</label>
+                    <label className="am-label-sm">{newPlan.type === 'fgts_parcela' ? 'A partir do mes' : 'No mes'}</label>
                     <input
                       type="number"
                       className="am-input am-input-sm"
@@ -496,19 +814,43 @@ export default function Amortizacao() {
                   </div>
                 )}
               </div>
-              <button className="am-btn am-btn-primary" onClick={addPlan}>Adicionar Plano</button>
+              {newPlan.type === 'fgts_parcela' && (
+                <div className="am-field">
+                  <div className="am-extra-header">
+                    <label className="am-switch">
+                      <input type="checkbox" checked={newPlan.amortizeDiscount} onChange={e => setNewPlan(p => ({ ...p, amortizeDiscount: e.target.checked }))} />
+                      <span className="am-switch-slider" />
+                    </label>
+                    <span className="am-label-sm">Amortizar valor descontado (do bolso)</span>
+                  </div>
+                </div>
+              )}
+              {(newPlan.type === 'fgts_parcela' || newPlan.type === 'fgts_saldo') && (
+                <div className="am-field">
+                  <div className="am-extra-header">
+                    <label className="am-switch">
+                      <input type="checkbox" checked={newPlan.recurring} onChange={e => setNewPlan(p => ({ ...p, recurring: e.target.checked }))} />
+                      <span className="am-switch-slider" />
+                    </label>
+                    <span className="am-label-sm">
+                      Recorrente (a cada {newPlan.type === 'fgts_saldo' ? '24' : '12'} meses)
+                    </span>
+                  </div>
+                </div>
+              )}
+              <button className="am-btn am-btn-primary" onClick={addPlan}>{editingPlanId ? 'Salvar' : 'Adicionar Plano'}</button>
             </div>
           )}
 
           {plans.length > 0 && (
             <div className="am-plans-list">
               {plans.map(plan => (
-                <div key={plan.id} className="am-plan-item">
+                <div key={plan.id} className="am-plan-item am-plan-item-clickable" onClick={() => editPlan(plan)}>
                   <div className="am-plan-info">
                     <span className="am-plan-type">{planTypeLabel(plan.type)}</span>
                     <span className="am-plan-desc">{planDescription(plan)}</span>
                   </div>
-                  <button className="am-plan-remove" onClick={() => removePlan(plan.id)} aria-label="Remover plano">
+                  <button className="am-plan-remove" onClick={(e) => { e.stopPropagation(); removePlan(plan.id) }} aria-label="Remover plano">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                       <path d="M10.5 3.5L3.5 10.5M3.5 3.5L10.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
@@ -552,6 +894,13 @@ export default function Amortizacao() {
                   <div className="am-dash-card">
                     <span className="am-dash-label">Total Seguro/Taxa</span>
                     <span className="am-dash-value">{formatBRL(summary.totalInsurance)}</span>
+                  </div>
+                )}
+                {summary.totalFgts > 0 && (
+                  <div className="am-dash-card">
+                    <span className="am-dash-label">Economia FGTS</span>
+                    <span className="am-dash-value am-dash-value-green">{formatBRL(summary.totalFgts)}</span>
+                    <span className="am-dash-meta">Voce desembolsa {formatBRL(summary.totalPaid - summary.totalFgts)}</span>
                   </div>
                 )}
                 <div className="am-dash-card">
@@ -604,9 +953,12 @@ export default function Amortizacao() {
                         <th>Data</th>
                         <th>Parcela</th>
                         <th>Amortizacao</th>
+                        {summary.totalExtra > 0 && <th>Amort. Extra</th>}
                         <th>Juros</th>
                         {correction.enabled && <th>Correcao</th>}
                         {insurance.enabled && <th>Seguro/Taxa</th>}
+                        {summary.totalFgts > 0 && <th>FGTS</th>}
+                        {(summary.totalExtra > 0 || summary.totalFgts > 0) && <th>Total</th>}
                         <th>Saldo Devedor</th>
                       </tr>
                     </thead>
@@ -615,11 +967,14 @@ export default function Amortizacao() {
                         <tr key={row.month}>
                           <td className="ev-td-month">{row.month}</td>
                           <td>{formatMonth(row.date)}</td>
-                          <td className="ev-td-total">{formatBRL(row.payment)}</td>
+                          <td>{formatBRL(row.payment)}</td>
                           <td>{formatBRL(row.amortization)}</td>
+                          {summary.totalExtra > 0 && <td>{row.extraAmortization > 0 ? formatBRL(row.extraAmortization) : '-'}</td>}
                           <td>{formatBRL(row.interest)}</td>
                           {correction.enabled && <td>{formatBRL(row.correction)}</td>}
                           {insurance.enabled && <td>{formatBRL(row.insurance)}</td>}
+                          {summary.totalFgts > 0 && <td>{row.fgtsDiscount > 0 ? `- ${formatBRL(row.fgtsDiscount)}` : '-'}</td>}
+                          {(summary.totalExtra > 0 || summary.totalFgts > 0) && <td className="ev-td-total">{formatBRL(row.totalWithFgts)}</td>}
                           <td>{formatBRL(row.balance)}</td>
                         </tr>
                       ))}
@@ -630,7 +985,411 @@ export default function Amortizacao() {
             </section>
           </>
         )}
+        </>}
+
+        {/* ─── Compare Mode ─── */}
+        {compareMode && compareData && (
+          <>
+            {/* Strategy Cards */}
+            <section className="am-section">
+              <div className="am-section-header">
+                <h2 className="ev-section-title">Estrategias</h2>
+                {strategies.length < 3 && (
+                  <button className="am-btn am-btn-outline" onClick={addStrategy}>+ Estrategia</button>
+                )}
+              </div>
+              <div className="am-strategies-grid">
+                {strategies.map((strat, si) => (
+                  <div key={strat.id} className="am-strategy-card">
+                    <div className="am-strategy-header">
+                      <input
+                        type="text"
+                        className="am-strategy-name"
+                        value={strat.name}
+                        onChange={e => updateStrategyName(strat.id, e.target.value)}
+                      />
+                      {strategies.length > 1 && (
+                        <button className="am-plan-remove" onClick={() => removeStrategy(strat.id)} aria-label="Remover estrategia">
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <path d="M10.5 3.5L3.5 10.5M3.5 3.5L10.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    <div className="am-strategy-plans">
+                      <StrategyPlanAdder
+                        stratId={strat.id}
+                        plans={strat.plans}
+                        installments={installments}
+                        onAdd={addPlanToStrategy}
+                        onUpdate={updatePlanInStrategy}
+                        onRemove={removePlanFromStrategy}
+                        planTypeLabel={planTypeLabel}
+                        planDescription={planDescription}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Investment Config */}
+            <section className="am-section">
+              <div className="am-extra-card">
+                <div className="am-extra-header">
+                  <label className="am-switch">
+                    <input type="checkbox" checked={investment.enabled} onChange={e => setInvestment(prev => ({ ...prev, enabled: e.target.checked }))} />
+                    <span className="am-switch-slider" />
+                  </label>
+                  <span className="am-extra-title">Comparar com Investimento</span>
+                </div>
+                {investment.enabled && (
+                  <div className="am-extra-body">
+                    <div className="am-field">
+                      <label className="am-label-sm">Taxa de Rendimento (%)</label>
+                      <div className="am-input-row">
+                        <input type="number" className="am-input am-input-sm" value={investment.rate}
+                          onChange={e => setInvestment(prev => ({ ...prev, rate: Number(e.target.value) }))} min={0} step={0.01} />
+                        <div className="am-toggle-group am-toggle-small">
+                          <button className={`am-toggle-btn${investment.rateType === 'anual' ? ' active' : ''}`} onClick={() => setInvestment(prev => ({ ...prev, rateType: 'anual' }))}>a.a.</button>
+                          <button className={`am-toggle-btn${investment.rateType === 'mensal' ? ' active' : ''}`} onClick={() => setInvestment(prev => ({ ...prev, rateType: 'mensal' }))}>a.m.</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="am-extra-header" style={{ marginTop: 8 }}>
+                      <label className="am-switch">
+                        <input type="checkbox" checked={investment.includeMonthly} onChange={e => setInvestment(prev => ({ ...prev, includeMonthly: e.target.checked }))} />
+                        <span className="am-switch-slider" />
+                      </label>
+                      <span className="am-label-sm">Incluir economia mensal como aporte</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Compare Summary Cards */}
+            <section className="am-section">
+              <h2 className="ev-section-title">Comparativo</h2>
+              <div className="am-compare-grid" style={{ gridTemplateColumns: `repeat(${compareData.results.length}, 1fr)` }}>
+                {compareData.results.map(({ strategy, summary: s, investment: inv }, i) => {
+                  if (!s) return <div key={strategy.id} className="am-compare-col"><p className="am-empty-text">Sem planos</p></div>
+                  const isBestPaid = compareData.results.every(r => !r.summary || s.totalPaid <= r.summary.totalPaid)
+                  const isBestInterest = compareData.results.every(r => !r.summary || s.totalInterest <= r.summary.totalInterest)
+                  const isBestInstallments = compareData.results.every(r => !r.summary || s.effectiveInstallments <= r.summary.effectiveInstallments)
+                  return (
+                    <div key={strategy.id} className="am-compare-col">
+                      <h3 className="am-compare-col-title">{strategy.name}</h3>
+                      <div className={`am-compare-metric${isBestPaid ? ' am-compare-best' : ''}`}>
+                        <span className="am-dash-label">Total Pago</span>
+                        <span className="am-dash-value">{formatBRL(s.totalPaid)}</span>
+                      </div>
+                      <div className={`am-compare-metric${isBestInterest ? ' am-compare-best' : ''}`}>
+                        <span className="am-dash-label">Total Juros</span>
+                        <span className="am-dash-value am-dash-value-orange">{formatBRL(s.totalInterest)}</span>
+                      </div>
+                      <div className={`am-compare-metric${isBestInstallments ? ' am-compare-best' : ''}`}>
+                        <span className="am-dash-label">Parcelas</span>
+                        <span className="am-dash-value">{s.effectiveInstallments}</span>
+                      </div>
+                      <div className="am-compare-metric">
+                        <span className="am-dash-label">Primeira Parcela</span>
+                        <span className="am-dash-value">{formatBRL(s.firstPayment)}</span>
+                      </div>
+                      <div className="am-compare-metric">
+                        <span className="am-dash-label">Ultima Parcela</span>
+                        <span className="am-dash-value">{formatBRL(s.lastPayment)}</span>
+                      </div>
+                      {s.totalFgts > 0 && (
+                        <div className="am-compare-metric">
+                          <span className="am-dash-label">Economia FGTS</span>
+                          <span className="am-dash-value am-dash-value-green">{formatBRL(s.totalFgts)}</span>
+                        </div>
+                      )}
+                      {inv && (
+                        <>
+                          {inv.invested > 0 && (
+                            <>
+                              <div className="am-compare-metric am-compare-invest">
+                                <span className="am-dash-label">Investimento (do bolso)</span>
+                                <span className="am-dash-value">{formatBRL(inv.invested)}</span>
+                                <span className="am-dash-meta">Aportado</span>
+                              </div>
+                              <div className="am-compare-metric am-compare-invest">
+                                <span className="am-dash-label">Rendimento Investimento</span>
+                                <span className="am-dash-value am-dash-value-green">{formatBRL(inv.profit)}</span>
+                                <span className="am-dash-meta">Saldo: {formatBRL(inv.finalBalance)}</span>
+                              </div>
+                            </>
+                          )}
+                          {inv.fgtsInvested > 0 && (
+                            <>
+                              <div className="am-compare-metric am-compare-invest">
+                                <span className="am-dash-label">FGTS Utilizado</span>
+                                <span className="am-dash-value">{formatBRL(inv.fgtsInvested)}</span>
+                                <span className="am-dash-meta">Rende 3% a.a. no fundo</span>
+                              </div>
+                              <div className="am-compare-metric am-compare-invest">
+                                <span className="am-dash-label">Rendimento FGTS</span>
+                                <span className="am-dash-value am-dash-value-green">{formatBRL(inv.fgtsProfit)}</span>
+                                <span className="am-dash-meta">Saldo: {formatBRL(inv.fgtsFinalBalance)}</span>
+                              </div>
+                            </>
+                          )}
+                          <div className={`am-compare-metric am-compare-invest${
+                            compareData.results.every(r => !r.investment || inv.totalPatrimony >= r.investment.totalPatrimony) ? ' am-compare-best' : ''
+                          }`}>
+                            <span className="am-dash-label">Patrimonio Total</span>
+                            <span className="am-dash-value">{formatBRL(inv.totalPatrimony)}</span>
+                            <span className="am-dash-meta">Investimento + FGTS</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+
+            {/* Analysis */}
+            {investment.enabled && compareData.results.filter(r => r.investment).length >= 2 && (() => {
+              const withInv = compareData.results.filter(r => r.summary && r.investment)
+              if (withInv.length < 2) return null
+
+              // Calculate net patrimony: patrimony accumulated - (total interest paid beyond base)
+              const analyses = withInv.map(r => {
+                const patrimony = r.investment.totalPatrimony
+                const totalPaid = r.summary.totalPaid
+                const totalFgtsUsed = r.summary.totalFgts
+                // Net = patrimonio acumulado - custo total do financiamento + valor do emprestimo (ja quitado = imovel)
+                // Simplificando: patrimonio liquido = patrimonio_investimentos - (juros extras vs base)
+                return {
+                  name: r.strategy.name,
+                  patrimony,
+                  totalPaid,
+                  totalInterest: r.summary.totalInterest,
+                  effectiveInstallments: r.summary.effectiveInstallments,
+                  totalFgts: totalFgtsUsed,
+                  // Patrimonio final = investimentos acumulados (o imovel todos tem igual)
+                  netPatrimony: patrimony,
+                }
+              })
+
+              const best = analyses.reduce((a, b) => a.netPatrimony > b.netPatrimony ? a : b)
+              const others = analyses.filter(a => a !== best)
+              const hasClearWinner = others.every(o => best.netPatrimony > o.netPatrimony)
+
+              return (
+                <section className="am-section">
+                  <div className="am-analysis-card">
+                    <h3 className="am-analysis-title">Analise Comparativa</h3>
+                    <div className="am-analysis-body">
+                      {hasClearWinner ? (
+                        <>
+                          <p className="am-analysis-text">
+                            <strong>{best.name}</strong> gera o maior patrimonio ao final do financiamento: <strong className="am-analysis-highlight">{formatBRL(best.netPatrimony)}</strong>
+                          </p>
+                          {others.map(o => (
+                            <p key={o.name} className="am-analysis-text">
+                              Comparado com <strong>{o.name}</strong>, sao <strong className="am-analysis-highlight">{formatBRL(best.netPatrimony - o.netPatrimony)}</strong> a mais em patrimonio acumulado.
+                            </p>
+                          ))}
+                          {best.effectiveInstallments < Math.max(...analyses.map(a => a.effectiveInstallments)) && (
+                            <p className="am-analysis-text am-analysis-detail">
+                              Alem disso, {best.name} quita o financiamento em <strong>{best.effectiveInstallments} parcelas</strong> ({Math.floor(best.effectiveInstallments / 12)} anos e {best.effectiveInstallments % 12} meses), economizando {Math.max(...analyses.map(a => a.effectiveInstallments)) - best.effectiveInstallments} parcelas.
+                            </p>
+                          )}
+                          {best.totalInterest < Math.max(...analyses.map(a => a.totalInterest)) && (
+                            <p className="am-analysis-text am-analysis-detail">
+                              Total de juros pagos: {formatBRL(best.totalInterest)} — economia de {formatBRL(Math.max(...analyses.map(a => a.totalInterest)) - best.totalInterest)} em juros.
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="am-analysis-text">
+                          As estrategias geram patrimonio equivalente: {formatBRL(best.netPatrimony)}.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              )
+            })()}
+
+            {/* Compare Balance Chart */}
+            <section className="am-section">
+              <h2 className="ev-section-title">Evolucao do Saldo Devedor</h2>
+              <CompareBalanceChart
+                schedules={compareData.results.map(r => r.schedule)}
+                names={compareData.results.map(r => r.strategy.name)}
+              />
+            </section>
+
+            {/* Compare Table */}
+            <section className="am-section">
+              <div className="am-section-header">
+                <h2 className="ev-section-title">Tabela Comparativa</h2>
+                <button className="am-btn am-btn-outline" onClick={() => setShowCompareTable(!showCompareTable)}>
+                  {showCompareTable ? 'Ocultar' : 'Mostrar Tabela'}
+                </button>
+              </div>
+              {showCompareTable && compareData.results.length > 0 && (
+                <div className="ev-table-wrap">
+                  <table className="ev-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        {compareData.results.map(r => (
+                          <th key={r.strategy.id} colSpan={2}>{r.strategy.name}</th>
+                        ))}
+                      </tr>
+                      <tr>
+                        <th>Mes</th>
+                        {compareData.results.map(r => (
+                          <React.Fragment key={r.strategy.id}>
+                            <th>Parcela</th>
+                            <th>Saldo</th>
+                          </React.Fragment>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: Math.max(...compareData.results.map(r => r.schedule.length)) }, (_, i) => (
+                        <tr key={i}>
+                          <td className="ev-td-month">{i + 1}</td>
+                          {compareData.results.map(r => (
+                            <React.Fragment key={r.strategy.id}>
+                              <td>{r.schedule[i] ? formatBRL(r.schedule[i].totalWithFgts) : '-'}</td>
+                              <td>{r.schedule[i] ? formatBRL(r.schedule[i].balance) : '-'}</td>
+                            </React.Fragment>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </>
+        )}
       </div>
+    </>
+  )
+}
+
+// ─── Strategy Plan Adder (mini form for compare mode) ───
+function StrategyPlanAdder({ stratId, plans, installments, onAdd, onUpdate, onRemove, planTypeLabel, planDescription }) {
+  const [show, setShow] = useState(false)
+  const [plan, setPlan] = useState({ type: 'mensal', amount: 500, month: 12, frequency: 6, amortizeDiscount: false, recurring: false })
+  const [editingId, setEditingId] = useState(null)
+
+  const resetForm = () => {
+    setShow(false)
+    setEditingId(null)
+    setPlan({ type: 'mensal', amount: 500, month: 12, frequency: 6, amortizeDiscount: false, recurring: false })
+  }
+
+  const handleAdd = () => {
+    if (plan.type === 'fgts_parcela' && !plan.recurring) {
+      const overlap = plans.find(p => p.type === 'fgts_parcela' && p.id !== editingId &&
+        !(plan.month >= p.month + 12 || plan.month + 12 <= p.month))
+      if (overlap) { alert('FGTS Parcelas: intervalo minimo de 12 meses.'); return }
+    }
+    if (plan.type === 'fgts_saldo' && !plan.recurring) {
+      const tooClose = plans.find(p => p.type === 'fgts_saldo' && p.id !== editingId && Math.abs(plan.month - p.month) < 24)
+      if (tooClose) { alert('FGTS Saldo: intervalo minimo de 24 meses.'); return }
+    }
+    if (editingId) {
+      onUpdate(stratId, editingId, plan)
+    } else {
+      onAdd(stratId, plan)
+    }
+    resetForm()
+  }
+
+  const handleEdit = (p) => {
+    setPlan({ type: p.type, amount: p.amount, month: p.month, frequency: p.frequency, amortizeDiscount: p.amortizeDiscount, recurring: p.recurring || false })
+    setEditingId(p.id)
+    setShow(true)
+  }
+
+  return (
+    <>
+      {plans.map(p => (
+        <div key={p.id} className="am-plan-item am-plan-item-sm am-plan-item-clickable" onClick={() => handleEdit(p)}>
+          <div className="am-plan-info">
+            <span className="am-plan-type">{planTypeLabel(p.type)}</span>
+            <span className="am-plan-desc">{planDescription(p)}</span>
+          </div>
+          <button className="am-plan-remove" onClick={(e) => { e.stopPropagation(); onRemove(stratId, p.id) }} aria-label="Remover">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+              <path d="M10.5 3.5L3.5 10.5M3.5 3.5L10.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      ))}
+      {!show && <button className="am-btn am-btn-outline am-btn-sm" onClick={() => setShow(true)}>+ Plano</button>}
+      {show && (
+        <div className="am-plan-form am-plan-form-compact">
+          <div className="am-toggle-group am-toggle-small">
+            <button className={`am-toggle-btn${plan.type === 'unico' ? ' active' : ''}`} onClick={() => setPlan(p => ({ ...p, type: 'unico' }))}>Unico</button>
+            <button className={`am-toggle-btn${plan.type === 'mensal' ? ' active' : ''}`} onClick={() => setPlan(p => ({ ...p, type: 'mensal' }))}>Mensal</button>
+            <button className={`am-toggle-btn${plan.type === 'periodico' ? ' active' : ''}`} onClick={() => setPlan(p => ({ ...p, type: 'periodico' }))}>Periodico</button>
+            <button className={`am-toggle-btn${plan.type === 'fgts_parcela' || plan.type === 'fgts_saldo' ? ' active' : ''}`} onClick={() => setPlan(p => ({ ...p, type: 'fgts_parcela' }))}>FGTS</button>
+          </div>
+          {(plan.type === 'fgts_parcela' || plan.type === 'fgts_saldo') && (
+            <div className="am-toggle-group am-toggle-small">
+              <button className={`am-toggle-btn${plan.type === 'fgts_parcela' ? ' active' : ''}`} onClick={() => setPlan(p => ({ ...p, type: 'fgts_parcela' }))}>Parcelas</button>
+              <button className={`am-toggle-btn${plan.type === 'fgts_saldo' ? ' active' : ''}`} onClick={() => setPlan(p => ({ ...p, type: 'fgts_saldo' }))}>Saldo</button>
+            </div>
+          )}
+          <div className="am-plan-form-row">
+            <div className="am-field">
+              <label className="am-label-sm">R$</label>
+              <input type="number" className="am-input am-input-sm" value={plan.amount}
+                onChange={e => setPlan(p => ({ ...p, amount: Number(e.target.value) }))} min={0} step={100} />
+            </div>
+            {(plan.type === 'unico' || plan.type === 'fgts_parcela' || plan.type === 'fgts_saldo') && (
+              <div className="am-field">
+                <label className="am-label-sm">{plan.type === 'fgts_parcela' ? 'Inicio' : 'Mes'}</label>
+                <input type="number" className="am-input am-input-sm" value={plan.month}
+                  onChange={e => setPlan(p => ({ ...p, month: Number(e.target.value) }))} min={1} max={installments} />
+              </div>
+            )}
+            {plan.type === 'periodico' && (
+              <div className="am-field">
+                <label className="am-label-sm">A cada</label>
+                <input type="number" className="am-input am-input-sm" value={plan.frequency}
+                  onChange={e => setPlan(p => ({ ...p, frequency: Number(e.target.value) }))} min={1} />
+              </div>
+            )}
+          </div>
+          {plan.type === 'fgts_parcela' && (
+            <div className="am-extra-header">
+              <label className="am-switch">
+                <input type="checkbox" checked={plan.amortizeDiscount} onChange={e => setPlan(p => ({ ...p, amortizeDiscount: e.target.checked }))} />
+                <span className="am-switch-slider" />
+              </label>
+              <span className="am-label-sm">Amortizar desconto</span>
+            </div>
+          )}
+          {(plan.type === 'fgts_parcela' || plan.type === 'fgts_saldo') && (
+            <div className="am-extra-header">
+              <label className="am-switch">
+                <input type="checkbox" checked={plan.recurring} onChange={e => setPlan(p => ({ ...p, recurring: e.target.checked }))} />
+                <span className="am-switch-slider" />
+              </label>
+              <span className="am-label-sm">
+                Recorrente (a cada {plan.type === 'fgts_saldo' ? '24' : '12'} meses)
+              </span>
+            </div>
+          )}
+          <div className="am-plan-form-row">
+            <button className="am-btn am-btn-primary am-btn-sm" onClick={handleAdd}>{editingId ? 'Salvar' : 'Adicionar'}</button>
+            <button className="am-btn am-btn-outline am-btn-sm" onClick={resetForm}>Cancelar</button>
+          </div>
+        </div>
+      )}
     </>
   )
 }
