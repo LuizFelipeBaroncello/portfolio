@@ -4,6 +4,9 @@ import 'react-resizable/css/styles.css'
 import '../styles/main.css'
 import '../styles/ev-stats.css'
 import '../styles/amortizacao.css'
+import '../styles/sun-map.css'
+import '../styles/sun-map-interior.css'
+import 'maplibre-gl/dist/maplibre-gl.css'
 
 export default function App({ Component, pageProps }) {
   return (
