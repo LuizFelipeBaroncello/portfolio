@@ -16,12 +16,11 @@ const FILTER_MAP = {
   All: () => true,
   About: (card) => ['bio', 'map', 'social', 'linkedin'].includes(card.id),
   Projects: (card) => card.type === 'project',
-  Media: (card) => ['music', 'blog'].includes(card.id),
+  Media: (card) => ['music'].includes(card.id),
 }
 
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState('All')
-  const [locked, setLocked] = useState(false)
   const [theme, toggleTheme] = useTheme()
   const [layouts, setLayouts] = useState(GRID_LAYOUTS)
   const [mounted, setMounted] = useState(false)
@@ -96,8 +95,6 @@ export default function Home() {
         return (
           <BioCard
             key={card.id}
-            locked={locked}
-            onToggleLockdown={() => setLocked((p) => !p)}
             isFiltered={filtered}
           />
         )
@@ -126,30 +123,6 @@ export default function Home() {
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 Visit project <span className="card-link-arrow">→</span>
-              </a>
-            </div>
-          </Card>
-        )
-      case 'blog':
-        return (
-          <Card key={card.id} className="blog-card" isFiltered={filtered} accent={card.accent}>
-            <div className="card-body">
-              <div className="card-label">
-                <span
-                  className="card-label-dot"
-                  style={{ background: `var(--accent-${card.accent})` }}
-                />
-                Blog
-              </div>
-              <div className="card-title">{card.title}</div>
-              <div className="card-description">{card.description}</div>
-              <div className="card-date">{card.date}</div>
-              <a
-                href="#"
-                className="read-more"
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                Read more <span>→</span>
               </a>
             </div>
           </Card>
@@ -211,36 +184,31 @@ export default function Home() {
         <title>Luiz Felipe Baroncello — Software Engineer</title>
       </Head>
       <div className="page-container">
-        <header className="header">
-          <span className="header-logo">LFRB</span>
-          <a href="mailto:luizfelipe_rv97@hotmail.com" className="contact-link">
-            Contact
-          </a>
-        </header>
-
         <FilterBar
           filters={CATEGORY_FILTERS}
           activeFilter={activeFilter}
           onSetFilter={setActiveFilter}
           theme={theme}
           onToggleTheme={toggleTheme}
+          logo="LFRB"
+          contactHref="mailto:luizfelipe_rv97@hotmail.com"
         />
 
         {mounted && (
           <ResponsiveGridLayout
-            className={`bento-grid${locked ? '' : ' draggable'}`}
+            className="bento-grid draggable"
             layouts={filteredLayouts}
             breakpoints={{ lg: 1200, md: 900, sm: 0 }}
             cols={{ lg: 12, md: 8, sm: 4 }}
             rowHeight={180}
             margin={[16, 16]}
             containerPadding={[0, 0]}
-            isDraggable={!locked}
+            isDraggable
             isResizable={false}
             compactType="vertical"
             onLayoutChange={handleLayoutChange}
             onDragStop={handleDragStop}
-            draggableCancel=".lockdown-btn, a, button, input"
+            draggableCancel="a, button, input"
           >
             {CARDS_DATA.map((card) => (
               <div key={card.id}>{renderCard(card)}</div>

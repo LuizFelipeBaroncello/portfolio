@@ -12,6 +12,8 @@ const CATEGORIES = [
   { key: 'quilometragem', label: 'Quilometragem', icon: '🛣️', color: 'cyan', unit: 'km' }
 ]
 
+const HIDDEN_CATEGORIES = ['custo_carro']
+const VISIBLE_CATEGORIES = CATEGORIES.filter((c) => !HIDDEN_CATEGORIES.includes(c.key))
 const COST_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'quilometragem')
 
 const COLOR_MAP = {
@@ -160,7 +162,7 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
   const maxVal = useMemo(() => {
     let max = 0
     for (const row of data) {
-      for (const cat of CATEGORIES) {
+      for (const cat of VISIBLE_CATEGORIES) {
         if (visibleCats.has(cat.key) && row[cat.key] > max) {
           max = row[cat.key]
         }
@@ -184,7 +186,7 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
   })
 
   // Build polylines for each visible category
-  const lines = CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => {
+  const lines = VISIBLE_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => {
     const points = data.map((row, i) => `${getX(i)},${getY(row[cat.key])}`).join(' ')
     const areaPoints = [
       ...data.map((row, i) => `${getX(i)},${getY(row[cat.key])}`),
@@ -220,7 +222,7 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
     return { y: getYAdj(val), label: formatBRLCompact(val) }
   })
 
-  const adjLines = CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => {
+  const adjLines = VISIBLE_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => {
     const points = data.map((row, i) => `${getX(i)},${getYAdj(row[cat.key])}`).join(' ')
     const areaPoints = [
       ...data.map((row, i) => `${getX(i)},${getYAdj(row[cat.key])}`),
@@ -297,7 +299,7 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
             <circle
               key={`dot-${line.key}-${i}`}
               cx={getX(i)}
-              cy={getYAdj(row[CATEGORIES.find((c) => c.key === line.key)?.key] || 0)}
+              cy={getYAdj(row[VISIBLE_CATEGORIES.find((c) => c.key === line.key)?.key] || 0)}
               r={hoveredIndex === i ? 4 : 2.5}
               fill={line.color}
               className="ev-chart-dot"
@@ -357,7 +359,7 @@ function ChartTooltip({ data, index, visibleCats }) {
   return (
     <div className="ev-chart-tooltip">
       <div className="ev-tooltip-month">{formatMonth(row.mes)}</div>
-      {CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => (
+      {VISIBLE_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => (
         <div key={cat.key} className="ev-tooltip-row">
           <span className={`ev-tooltip-dot ${cat.color}`} />
           <span className="ev-tooltip-label">{cat.label}</span>
@@ -382,7 +384,7 @@ export default function EVStats() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [theme, toggleTheme] = useTheme()
-  const [visibleCats, setVisibleCats] = useState(() => new Set(CATEGORIES.map((c) => c.key)))
+  const [visibleCats, setVisibleCats] = useState(() => new Set(VISIBLE_CATEGORIES.map((c) => c.key)))
   const [period, setPeriod] = useState('mensal')
   const [hoveredIndex, setHoveredIndex] = useState(null)
 
@@ -459,7 +461,7 @@ export default function EVStats() {
   // Computed values
   const totals = useMemo(() => {
     const acc = { total: 0 }
-    CATEGORIES.forEach((cat) => {
+    VISIBLE_CATEGORIES.forEach((cat) => {
       acc[cat.key] = 0
     })
     for (const row of data) {
@@ -492,7 +494,7 @@ export default function EVStats() {
   const maxMonthlyTotal = useMemo(() => {
     return Math.max(
       ...data.map((row) =>
-        CATEGORIES.reduce((s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0), 0)
+        VISIBLE_CATEGORIES.reduce((s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0), 0)
       ),
       1
     )
@@ -589,9 +591,9 @@ export default function EVStats() {
             <section className="ev-section">
               <h2 className="ev-section-title">Por Categoria</h2>
               <div className="ev-categories">
-                {CATEGORIES.map((cat) => {
+                {VISIBLE_CATEGORIES.map((cat) => {
                   const val = totals[cat.key] || 0
-                  const allTotal = CATEGORIES.reduce((s, c) => s + (totals[c.key] || 0), 0)
+                  const allTotal = VISIBLE_CATEGORIES.reduce((s, c) => s + (totals[c.key] || 0), 0)
                   const pct = allTotal > 0 ? (val / allTotal) * 100 : 0
                   const avg = cat.unit === 'km'
                     ? (data.length > 0 ? val / data.length : 0)
@@ -631,7 +633,7 @@ export default function EVStats() {
 
             {/* Interactive Legend */}
             <div className="ev-legend">
-              {CATEGORIES.map((cat) => (
+              {VISIBLE_CATEGORIES.map((cat) => (
                 <button
                   key={cat.key}
                   className={`ev-legend-btn${!visibleCats.has(cat.key) ? ' hidden' : ''}`}
@@ -666,7 +668,7 @@ export default function EVStats() {
               <h2 className="ev-section-title">Timeline Mensal</h2>
               <div className="ev-timeline">
                 {[...data].reverse().map((row) => {
-                  const total = CATEGORIES.reduce(
+                  const total = VISIBLE_CATEGORIES.reduce(
                     (s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0),
                     0
                   )
@@ -676,7 +678,7 @@ export default function EVStats() {
                       <span className="ev-month-label">{formatMonth(row.mes)}</span>
                       <div className="ev-month-bar-track">
                         <div className="ev-month-bar-fill" style={{ width: `${barPct}%` }}>
-                          {CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => {
+                          {VISIBLE_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => {
                             const catVal = row[cat.key] || 0
                             const catPct = total > 0 ? (catVal / total) * 100 : 0
                             if (catPct < 1) return null
@@ -711,7 +713,7 @@ export default function EVStats() {
                   <thead>
                     <tr>
                       <th>Mes</th>
-                      {CATEGORIES.filter((c) => visibleCats.has(c.key)).map((c) => (
+                      {VISIBLE_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((c) => (
                         <th key={c.key}>
                           <span className="ev-th-icon">{c.icon}</span>
                           {c.label}
@@ -729,7 +731,7 @@ export default function EVStats() {
                       return (
                         <tr key={row.mes}>
                           <td className="ev-td-month">{formatMonth(row.mes)}</td>
-                          {CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => (
+                          {VISIBLE_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => (
                             <td key={cat.key}>{formatCatValue(cat, row[cat.key] || 0)}</td>
                           ))}
                           <td className="ev-td-total">{formatBRL(total)}</td>

@@ -1,4 +1,4 @@
-export default function BioCard({ locked, onToggleLockdown, isFiltered }) {
+export default function BioCard({ isFiltered }) {
   return (
     <div className={`card bio-card${isFiltered ? ' filtered-out' : ''}`}>
       <div className="card-inner">
@@ -17,13 +17,6 @@ export default function BioCard({ locked, onToggleLockdown, isFiltered }) {
             <strong>React</strong>, <strong>Microservices</strong>{' '}
             and <strong>Cloud</strong>.
           </p>
-          <button
-            className={`lockdown-btn${locked ? ' locked' : ''}`}
-            onClick={onToggleLockdown}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            {locked ? '🔒' : '↕'} {locked ? 'Unlock grid' : 'Toggle Lockdown'}
-          </button>
         </div>
       </div>
     </div>
