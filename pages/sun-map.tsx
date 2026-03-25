@@ -1137,6 +1137,17 @@ export default function SunMap() {
     <div className="sm-page">
       <Head>
         <title>Sun Position Map</title>
+        <meta name="description" content="Mapa interativo de posição solar 3D. Visualize a direção do sol, sombras e raios solares para qualquer local e horário." />
+        <meta name="keywords" content="sol, posição solar, mapa solar, sombras, 3D, sun map, azimute, altitude solar" />
+        <meta property="og:title" content="Sun Position Map — Mapa Solar 3D" />
+        <meta property="og:description" content="Mapa interativo de posição solar 3D. Visualize a direção do sol, sombras e raios solares para qualquer local e horário." />
+        <meta property="og:image" content="/og-image.svg" />
+        <meta property="og:url" content="https://luizfelipebaroncello.com/sun-map" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Sun Position Map — Mapa Solar 3D" />
+        <meta name="twitter:description" content="Mapa interativo de posição solar 3D. Visualize a direção do sol, sombras e raios solares para qualquer local e horário." />
+        <meta name="twitter:image" content="/og-image.svg" />
       </Head>
 
       {/* Map */}

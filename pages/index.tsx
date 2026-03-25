@@ -184,6 +184,17 @@ export default function Home() {
     <>
       <Head>
         <title>Luiz Felipe Baroncello — Software Engineer</title>
+        <meta name="description" content="Portfolio de Luiz Felipe Baroncello, Software Engineer em Santa Catarina, Brasil. Projetos em Java, React, Spring, Microservices e Cloud." />
+        <meta name="keywords" content="software engineer, java, react, spring, microservices, cloud, santa catarina, brasil, portfolio" />
+        <meta property="og:title" content="Luiz Felipe Baroncello — Software Engineer" />
+        <meta property="og:description" content="Portfolio de Luiz Felipe Baroncello, Software Engineer em Santa Catarina, Brasil. Projetos em Java, React, Spring, Microservices e Cloud." />
+        <meta property="og:image" content="/og-image.svg" />
+        <meta property="og:url" content="https://luizfelipebaroncello.com/" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Luiz Felipe Baroncello — Software Engineer" />
+        <meta name="twitter:description" content="Portfolio de Luiz Felipe Baroncello, Software Engineer em Santa Catarina, Brasil. Projetos em Java, React, Spring, Microservices e Cloud." />
+        <meta name="twitter:image" content="/og-image.svg" />
       </Head>
       <div className="page-container">
         <FilterBar
