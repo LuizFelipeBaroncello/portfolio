@@ -37,3 +37,6 @@ public/feed.xml
 
 # Claude agent worktrees
 .claude/worktrees/
+
+# TypeScript build info
+tsconfig.tsbuildinfo

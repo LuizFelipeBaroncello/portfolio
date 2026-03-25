@@ -582,6 +582,7 @@
   margin: 2px 0;
 }
 
+/* Recharts legend text color fix */
 .recharts-legend-item-text {
   color: var(--text-secondary) !important;
 }

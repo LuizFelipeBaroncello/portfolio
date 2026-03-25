@@ -523,7 +523,17 @@ export default function EVStats() {
     <>
       <Head>
         <title>EV Dashboard — Carro Eletrico</title>
-        <meta name="description" content="Estatisticas de uso do carro eletrico" />
+        <meta name="description" content="Dashboard de custos do carro elétrico. Análise de gastos com energia, seguro, manutenção e quilometragem." />
+        <meta name="keywords" content="carro elétrico, ev, dashboard, custos, energia, quilometragem, seguro" />
+        <meta property="og:title" content="EV Dashboard — Carro Elétrico" />
+        <meta property="og:description" content="Dashboard de custos do carro elétrico. Análise de gastos com energia, seguro, manutenção e quilometragem." />
+        <meta property="og:image" content="/og-image.svg" />
+        <meta property="og:url" content="https://luizfelipebaroncello.com/ev-stats" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="EV Dashboard — Carro Elétrico" />
+        <meta name="twitter:description" content="Dashboard de custos do carro elétrico. Análise de gastos com energia, seguro, manutenção e quilometragem." />
+        <meta name="twitter:image" content="/og-image.svg" />
       </Head>
 
       <div className="ev-page">

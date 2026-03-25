@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#111111"/>
+  <rect x="60" y="60" width="1080" height="510" rx="16" fill="#1a1a1a" stroke="#333333" stroke-width="1"/>
+  <text x="600" y="260" font-family="monospace, sans-serif" font-size="72" font-weight="bold" fill="#ffffff" text-anchor="middle">Luiz Felipe Baroncello</text>
+  <text x="600" y="340" font-family="monospace, sans-serif" font-size="36" fill="#888888" text-anchor="middle">Software Engineer</text>
+  <text x="600" y="410" font-family="monospace, sans-serif" font-size="28" fill="#555555" text-anchor="middle">Santa Catarina, Brasil</text>
+  <text x="600" y="480" font-family="monospace, sans-serif" font-size="22" fill="#444444" text-anchor="middle">luizfelipebaroncello.com</text>
+</svg>
