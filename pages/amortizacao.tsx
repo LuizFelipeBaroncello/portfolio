@@ -13,6 +13,12 @@ import {
   planTypeLabel,
   planDescription,
 } from '../lib/amortizacao'
+import {
+  AmortCompositionChart,
+  BalanceChart,
+  AccumulatedCostChart,
+  CompareBalanceChart as RechartsCompareBalanceChart,
+} from '../components/amortizacao/AmortizacaoCharts'
 
 interface ScheduleRow {
   month: number
@@ -43,130 +49,6 @@ interface Strategy {
   id: number
   name: string
   plans: AmortPlan[]
-}
-
-// ─── Compare Chart (Saldo Devedor) ───
-function CompareBalanceChart({ schedules, names }: { schedules: ScheduleRow[][], names: string[] }) {
-  if (schedules.every(s => s.length === 0)) return null
-
-  const COLORS = ['var(--accent-blue)', 'var(--accent-orange)', '#22c55e']
-  const W = 800, H = 260, padL = 75, padR = 20, padT = 20, padB = 35
-  const plotW = W - padL - padR
-  const plotH = H - padT - padB
-
-  const maxMonths = Math.max(...schedules.map(s => s.length))
-  const maxBalance = Math.max(...schedules.flatMap(s => s.map(r => r.balance)), 1)
-
-  const getX = (i) => padL + (i / (maxMonths - 1 || 1)) * plotW
-  const getY = (val) => padT + plotH - (val / maxBalance) * plotH
-
-  const gridCount = 4
-  const gridLines = Array.from({ length: gridCount + 1 }, (_, i) => {
-    const val = (maxBalance / gridCount) * i
-    return { y: getY(val), label: val >= 1000 ? `R$ ${(val / 1000).toFixed(0)}k` : `R$ ${Math.round(val)}` }
-  })
-
-  const labelEvery = Math.max(1, Math.ceil(maxMonths / 12))
-
-  return (
-    <div className="am-chart-wrap">
-      <svg className="am-chart-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
-        {gridLines.map((g, i) => (
-          <g key={i}>
-            <line className="am-chart-gridline" x1={padL} y1={g.y} x2={W - padR} y2={g.y} />
-            <text className="am-chart-label-y" x={padL - 8} y={g.y + 4} textAnchor="end">{g.label}</text>
-          </g>
-        ))}
-        {schedules.map((sched, si) => {
-          if (sched.length === 0) return null
-          const points = sched.map((r, i) => `${getX(i)},${getY(r.balance)}`).join(' ')
-          return <polyline key={si} className="am-chart-line" points={points} stroke={COLORS[si]} strokeWidth="2" fill="none" />
-        })}
-        {Array.from({ length: maxMonths }, (_, i) => i).map(i =>
-          i % labelEvery === 0 ? (
-            <text key={i} className="am-chart-label-x" x={getX(i)} y={H - 8} textAnchor="middle">{i + 1}</text>
-          ) : null
-        )}
-      </svg>
-      <div className="am-chart-legend">
-        {names.map((name, i) => (
-          <span key={i} className="am-legend-item">
-            <span className="am-legend-dot" style={{ background: COLORS[i] }} /> {name}
-          </span>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ─── SVG Mini Chart ───
-function AmortChart({ schedule }: { schedule: ScheduleRow[] }) {
-  if (schedule.length === 0) return null
-
-  const W = 800, H = 260, padL = 65, padR = 20, padT = 20, padB = 35
-  const plotW = W - padL - padR
-  const plotH = H - padT - padB
-
-  const maxPayment = Math.max(...schedule.map(r => r.total))
-  const maxBalance = Math.max(...schedule.map(r => r.balance), schedule.length > 0 ? schedule[0].amortization + schedule[0].balance : 0)
-  const effectiveMax = Math.max(maxPayment, 1)
-
-  const getX = (i) => padL + (i / (schedule.length - 1 || 1)) * plotW
-  const getY = (val) => padT + plotH - (val / effectiveMax) * plotH
-
-  const interestPoints = schedule.map((r, i) => `${getX(i)},${getY(r.interest)}`).join(' ')
-  const amortPoints = schedule.map((r, i) => `${getX(i)},${getY(r.amortization)}`).join(' ')
-  const paymentPoints = schedule.map((r, i) => `${getX(i)},${getY(r.total)}`).join(' ')
-
-  const interestArea = [
-    ...schedule.map((r, i) => `${getX(i)},${getY(r.interest)}`),
-    `${getX(schedule.length - 1)},${getY(0)}`,
-    `${getX(0)},${getY(0)}`
-  ].join(' ')
-
-  const amortArea = [
-    ...schedule.map((r, i) => `${getX(i)},${getY(r.amortization)}`),
-    `${getX(schedule.length - 1)},${getY(0)}`,
-    `${getX(0)},${getY(0)}`
-  ].join(' ')
-
-  const gridCount = 4
-  const gridLines = Array.from({ length: gridCount + 1 }, (_, i) => {
-    const val = (effectiveMax / gridCount) * i
-    return { y: getY(val), label: val >= 1000 ? `R$ ${(val / 1000).toFixed(1)}k` : `R$ ${Math.round(val)}` }
-  })
-
-  const labelEvery = Math.max(1, Math.ceil(schedule.length / 12))
-
-  return (
-    <div className="am-chart-wrap">
-      <svg className="am-chart-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet">
-        {gridLines.map((g, i) => (
-          <g key={i}>
-            <line className="am-chart-gridline" x1={padL} y1={g.y} x2={W - padR} y2={g.y} />
-            <text className="am-chart-label-y" x={padL - 8} y={g.y + 4} textAnchor="end">{g.label}</text>
-          </g>
-        ))}
-        <polygon className="am-chart-area" points={interestArea} fill="var(--accent-orange)" />
-        <polygon className="am-chart-area" points={amortArea} fill="var(--accent-blue)" />
-        <polyline className="am-chart-line" points={interestPoints} stroke="var(--accent-orange)" />
-        <polyline className="am-chart-line" points={amortPoints} stroke="var(--accent-blue)" />
-        <polyline className="am-chart-line am-chart-line-total" points={paymentPoints} />
-        {schedule.map((r, i) =>
-          i % labelEvery === 0 ? (
-            <text key={i} className="am-chart-label-x" x={getX(i)} y={H - 8} textAnchor="middle">
-              {r.month}
-            </text>
-          ) : null
-        )}
-      </svg>
-      <div className="am-chart-legend">
-        <span className="am-legend-item"><span className="am-legend-dot" style={{ background: 'var(--accent-blue)' }} /> Amortizacao</span>
-        <span className="am-legend-item"><span className="am-legend-dot" style={{ background: 'var(--accent-orange)' }} /> Juros</span>
-        <span className="am-legend-item"><span className="am-legend-dot am-legend-dot-dashed" /> Parcela Total</span>
-      </div>
-    </div>
-  )
 }
 
 // ─── Main Page ───
@@ -343,7 +225,17 @@ export default function Amortizacao() {
     <>
       <Head>
         <title>Simulador de Amortizacao</title>
-        <meta name="description" content="Simulador de amortizacao de financiamentos - SAC e Price" />
+        <meta name="description" content="Simulador de financiamento imobiliário com SAC/Price, planos de amortização extra, correção monetária e FGTS." />
+        <meta name="keywords" content="simulador, amortização, financiamento imobiliário, SAC, Price, FGTS, correção monetária" />
+        <meta property="og:title" content="Simulador de Amortização Imobiliária" />
+        <meta property="og:description" content="Simulador de financiamento imobiliário com SAC/Price, planos de amortização extra, correção monetária e FGTS." />
+        <meta property="og:image" content="/og-image.svg" />
+        <meta property="og:url" content="https://luizfelipebaroncello.com/amortizacao" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Simulador de Amortização Imobiliária" />
+        <meta name="twitter:description" content="Simulador de financiamento imobiliário com SAC/Price, planos de amortização extra, correção monetária e FGTS." />
+        <meta name="twitter:image" content="/og-image.svg" />
       </Head>
 
       <div className="am-page">
@@ -715,10 +607,24 @@ export default function Amortizacao() {
               </div>
             </section>
 
-            {/* ─── Chart ─── */}
+            {/* ─── Charts ─── */}
             <section className="am-section">
-              <h2 className="ev-section-title">Evolucao das Parcelas</h2>
-              <AmortChart schedule={schedule} />
+              <h2 className="ev-section-title">Composicao das Parcelas</h2>
+              <AmortCompositionChart
+                schedule={schedule}
+                hasInsurance={insurance.enabled && summary.totalInsurance > 0}
+                hasCorrection={correction.enabled && summary.totalCorrection > 0}
+              />
+            </section>
+
+            <section className="am-section">
+              <h2 className="ev-section-title">Evolucao do Saldo Devedor</h2>
+              <BalanceChart schedule={schedule} />
+            </section>
+
+            <section className="am-section">
+              <h2 className="ev-section-title">Custo Total Acumulado</h2>
+              <AccumulatedCostChart schedule={schedule} />
             </section>
 
             {/* ─── Table ─── */}
@@ -1004,7 +910,7 @@ export default function Amortizacao() {
             {/* Compare Balance Chart */}
             <section className="am-section">
               <h2 className="ev-section-title">Evolucao do Saldo Devedor</h2>
-              <CompareBalanceChart
+              <RechartsCompareBalanceChart
                 schedules={compareData.results.map(r => r.schedule)}
                 names={compareData.results.map(r => r.strategy.name)}
               />

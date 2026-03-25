@@ -556,6 +556,36 @@
   border-radius: 0;
 }
 
+/* ===== Recharts Tooltip ===== */
+.am-chart-tooltip {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: var(--shadow-card-hover);
+  min-width: 160px;
+}
+
+.am-chart-tooltip-label {
+  font-size: 11px;
+  font-variation-settings: 'wght' 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+}
+
+.am-chart-tooltip-item {
+  font-size: 13px;
+  font-variation-settings: 'wght' 500;
+  font-variant-numeric: tabular-nums;
+  margin: 2px 0;
+}
+
+.recharts-legend-item-text {
+  color: var(--text-secondary) !important;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .am-page {
