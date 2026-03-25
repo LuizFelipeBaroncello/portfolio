@@ -1,8 +1,8 @@
 import { useRef, useState, useEffect } from 'react'
 import { Responsive } from 'react-grid-layout'
 
-export default function BentoGrid(props) {
-  const containerRef = useRef(null)
+export default function BentoGrid(props: Record<string, any>) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export default function BentoGrid(props) {
 
   return (
     <div ref={containerRef}>
-      {width > 0 && <Responsive {...props} width={width} />}
+      {width > 0 && <Responsive {...(props as any)} width={width} />}
     </div>
   )
 }

@@ -14,8 +14,39 @@ import {
   planDescription,
 } from '../lib/amortizacao'
 
+interface ScheduleRow {
+  month: number
+  date: Date | string
+  payment: number
+  amortization: number
+  extraAmortization: number
+  interest: number
+  correction: number
+  insurance: number
+  fgtsDiscount: number
+  totalWithFgts: number
+  total: number
+  balance: number
+}
+
+interface AmortPlan {
+  id: number
+  type: string
+  amount: number
+  month: number
+  frequency: number
+  amortizeDiscount: boolean
+  recurring: boolean
+}
+
+interface Strategy {
+  id: number
+  name: string
+  plans: AmortPlan[]
+}
+
 // ─── Compare Chart (Saldo Devedor) ───
-function CompareBalanceChart({ schedules, names }) {
+function CompareBalanceChart({ schedules, names }: { schedules: ScheduleRow[][], names: string[] }) {
   if (schedules.every(s => s.length === 0)) return null
 
   const COLORS = ['var(--accent-blue)', 'var(--accent-orange)', '#22c55e']
@@ -69,7 +100,7 @@ function CompareBalanceChart({ schedules, names }) {
 }
 
 // ─── SVG Mini Chart ───
-function AmortChart({ schedule }) {
+function AmortChart({ schedule }: { schedule: ScheduleRow[] }) {
   if (schedule.length === 0) return null
 
   const W = 800, H = 260, padL = 65, padR = 20, padT = 20, padB = 35
@@ -1032,7 +1063,16 @@ export default function Amortizacao() {
 }
 
 // ─── Strategy Plan Adder (mini form for compare mode) ───
-function StrategyPlanAdder({ stratId, plans, installments, onAdd, onUpdate, onRemove, planTypeLabel, planDescription }) {
+function StrategyPlanAdder({ stratId, plans, installments, onAdd, onUpdate, onRemove, planTypeLabel, planDescription }: {
+  stratId: number
+  plans: AmortPlan[]
+  installments: number
+  onAdd: (stratId: number, plan: Omit<AmortPlan, 'id'>) => void
+  onUpdate: (stratId: number, planId: number, plan: Omit<AmortPlan, 'id'>) => void
+  onRemove: (stratId: number, planId: number) => void
+  planTypeLabel: (type: string) => string
+  planDescription: (plan: AmortPlan) => string
+}) {
   const [show, setShow] = useState(false)
   const [plan, setPlan] = useState({ type: 'mensal', amount: 500, month: 12, frequency: 6, amortizeDiscount: false, recurring: false })
   const [editingId, setEditingId] = useState(null)

@@ -1,4 +1,8 @@
-export default function BioCard({ isFiltered }) {
+interface BioCardProps {
+  isFiltered?: boolean
+}
+
+export default function BioCard({ isFiltered }: BioCardProps) {
   return (
     <div className={`card bio-card${isFiltered ? ' filtered-out' : ''}`}>
       <div className="card-inner">

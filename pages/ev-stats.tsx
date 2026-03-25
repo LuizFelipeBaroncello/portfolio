@@ -2,7 +2,26 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import Head from 'next/head'
 import { useTheme } from '../lib/use-theme'
 
-const CATEGORIES = [
+interface Category {
+  key: string
+  label: string
+  icon: string
+  color: string
+  unit?: string
+}
+
+interface DataRow {
+  mes: string
+  combustivel_energia: number
+  tag_estacionamento: number
+  limpeza: number
+  documentos_seguro: number
+  outros: number
+  quilometragem: number
+  [key: string]: any
+}
+
+const CATEGORIES: Category[] = [
   { key: 'custo_carro', label: 'Financiamento', icon: '🚗', color: 'blue' },
   { key: 'combustivel_energia', label: 'Energia', icon: '⚡', color: 'green' },
   { key: 'tag_estacionamento', label: 'Tag / Estacionamento', icon: '🅿️', color: 'purple' },
@@ -155,7 +174,7 @@ function interpolateMileage(months) {
 // ─── SVG Chart ───
 const CHART = { w: 800, h: 300, padL: 70, padR: 20, padT: 20, padB: 40 }
 
-function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
+function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }: { data: DataRow[], visibleCats: Set<string>, onHover: (i: number | null) => void, hoveredIndex: number | null }) {
   const plotW = CHART.w - CHART.padL - CHART.padR
   const plotH = CHART.h - CHART.padT - CHART.padB
 
@@ -352,7 +371,7 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }) {
 }
 
 // ─── Tooltip ───
-function ChartTooltip({ data, index, visibleCats }) {
+function ChartTooltip({ data, index, visibleCats }: { data: DataRow[], index: number | null, visibleCats: Set<string> }) {
   if (index === null || !data[index]) return null
   const row = data[index]
 
@@ -380,9 +399,9 @@ function ChartTooltip({ data, index, visibleCats }) {
 
 // ─── Main Page ───
 export default function EVStats() {
-  const [data, setData] = useState([])
+  const [data, setData] = useState<DataRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
   const [theme, toggleTheme] = useTheme()
   const [visibleCats, setVisibleCats] = useState(() => new Set(VISIBLE_CATEGORIES.map((c) => c.key)))
   const [period, setPeriod] = useState('mensal')
@@ -460,7 +479,7 @@ export default function EVStats() {
 
   // Computed values
   const totals = useMemo(() => {
-    const acc = { total: 0 }
+    const acc: { total: number; quilometragem?: number; [key: string]: number | undefined } = { total: 0 }
     VISIBLE_CATEGORIES.forEach((cat) => {
       acc[cat.key] = 0
     })

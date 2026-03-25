@@ -1,4 +1,8 @@
-export default function LinkedInCard({ isFiltered }) {
+interface LinkedInCardProps {
+  isFiltered?: boolean
+}
+
+export default function LinkedInCard({ isFiltered }: LinkedInCardProps) {
   return (
     <div className={`card linkedin-card${isFiltered ? ' filtered-out' : ''}`}>
       <div className="card-inner" style={{ height: '100%' }}>

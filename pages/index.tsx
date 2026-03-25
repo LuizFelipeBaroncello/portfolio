@@ -8,11 +8,13 @@ import MapCard from '../components/MapCard'
 import LinkedInCard from '../components/LinkedInCard'
 import MusicCard from '../components/MusicCard'
 import { useTheme } from '../lib/use-theme'
-import { CARDS_DATA, CATEGORY_FILTERS, GRID_LAYOUTS } from '../lib/cards-data'
+import { CARDS_DATA, CATEGORY_FILTERS, GRID_LAYOUTS, CardData, GridLayouts } from '../lib/cards-data'
 
 const ResponsiveGridLayout = dynamic(() => import('../components/BentoGrid'), { ssr: false })
 
-const FILTER_MAP = {
+type FilterFn = (card: CardData) => boolean
+
+const FILTER_MAP: Record<string, FilterFn> = {
   All: () => true,
   About: (card) => ['bio', 'map', 'social', 'linkedin'].includes(card.id),
   Projects: (card) => card.type === 'project',
@@ -22,7 +24,7 @@ const FILTER_MAP = {
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState('All')
   const [theme, toggleTheme] = useTheme()
-  const [layouts, setLayouts] = useState(GRID_LAYOUTS)
+  const [layouts, setLayouts] = useState<GridLayouts>(GRID_LAYOUTS)
   const [mounted, setMounted] = useState(false)
   const hasInteracted = useRef(false)
 
@@ -34,7 +36,7 @@ export default function Home() {
         const parsed = JSON.parse(saved)
         // Validate: if every item in any breakpoint is at x=0,y=0, layout is corrupted
         const isCorrupted = Object.values(parsed).some((bp) =>
-          Array.isArray(bp) && bp.length > 1 && bp.every((item) => item.x === 0 && item.y === 0)
+          Array.isArray(bp) && bp.length > 1 && bp.every((item: any) => item.x === 0 && item.y === 0)
         )
         if (!isCorrupted) {
           setLayouts(parsed)
@@ -47,7 +49,7 @@ export default function Home() {
     }
   }, [])
 
-  const handleLayoutChange = (_, allLayouts) => {
+  const handleLayoutChange = (_: any, allLayouts: GridLayouts) => {
     if (!hasInteracted.current) return
     localStorage.setItem('bento-layout', JSON.stringify(allLayouts))
     setLayouts(allLayouts)
@@ -61,11 +63,11 @@ export default function Home() {
     if (activeFilter === 'All') return layouts
 
     const filterFn = FILTER_MAP[activeFilter]
-    const result = {}
+    const result: GridLayouts = {} as GridLayouts
 
     for (const [bp, items] of Object.entries(layouts)) {
-      const matching = []
-      const nonMatching = []
+      const matching: any[] = []
+      const nonMatching: any[] = []
 
       for (const item of items) {
         const card = CARDS_DATA.find((c) => c.id === item.i)
@@ -82,12 +84,12 @@ export default function Home() {
     return result
   }, [activeFilter, layouts])
 
-  const isFiltered = (card) => {
+  const isFiltered = (card: CardData) => {
     if (activeFilter === 'All') return false
     return !FILTER_MAP[activeFilter]?.(card)
   }
 
-  const renderCard = (card) => {
+  const renderCard = (card: CardData) => {
     const filtered = isFiltered(card)
 
     switch (card.type) {

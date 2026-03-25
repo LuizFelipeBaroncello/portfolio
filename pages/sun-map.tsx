@@ -10,6 +10,7 @@ import {
   formatTime,
   mapAltitudeToIntensity,
   mapAltitudeToColor,
+  SunPosition,
 } from '../lib/sun-calc-utils'
 import InteriorView from '../components/sun-map/InteriorView'
 
@@ -453,8 +454,17 @@ function polygonCentroid(coords) {
   return [sumLng / verts.length, sumLat / verts.length]
 }
 
+interface SolarCompassProps {
+  sunPos: SunPosition
+  sunTimes: any
+  bearing: number
+  lat: number
+  lng: number
+  size?: number
+}
+
 /* ===== Solar Compass Component ===== */
-function SolarCompass({ sunPos, sunTimes, bearing, lat, lng, size = 140 }) {
+function SolarCompass({ sunPos, sunTimes, bearing, lat, lng, size = 140 }: SolarCompassProps) {
   const cx = size / 2
   const cy = size / 2
   const r = size * 0.38
@@ -700,7 +710,7 @@ export default function SunMap() {
         dragRotate: true,
         touchPitch: true,
         touchZoomRotate: true,
-      })
+      } as any)
 
       // No default nav control — user controls via mouse drag
       // Right-click drag = rotate, Ctrl+drag = pitch
@@ -1495,7 +1505,7 @@ export default function SunMap() {
                 value={formatDateISO(startDate)}
                 onChange={(e) => {
                   const d = new Date(e.target.value + 'T12:00:00')
-                  if (!isNaN(d)) {
+                  if (!isNaN(d.getTime())) {
                     setStartDate(d)
                     setCurrentPlayDate(new Date(d))
                     currentPlayDateRef.current = new Date(d)
@@ -1509,7 +1519,7 @@ export default function SunMap() {
                 value={formatDateISO(endDate)}
                 onChange={(e) => {
                   const d = new Date(e.target.value + 'T12:00:00')
-                  if (!isNaN(d)) setEndDate(d)
+                  if (!isNaN(d.getTime())) setEndDate(d)
                 }}
               />
             </div>
@@ -1576,8 +1586,8 @@ export default function SunMap() {
           <div className="sm-date-indicator">
             {effectiveDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
             {startDate && endDate && (() => {
-              const totalDays = Math.round((endDate - startDate) / 86400000)
-              const currentDay = Math.round((currentPlayDate - startDate) / 86400000) + 1
+              const totalDays = Math.round((endDate.getTime() - startDate.getTime()) / 86400000)
+              const currentDay = Math.round((currentPlayDate.getTime() - startDate.getTime()) / 86400000) + 1
               return ` (Dia ${currentDay} de ${totalDays})`
             })()}
           </div>
