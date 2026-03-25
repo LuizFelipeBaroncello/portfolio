@@ -1,9 +1,18 @@
+import { ReactNode } from 'react'
+
+interface CardProps {
+  children?: ReactNode
+  className?: string
+  isFiltered?: boolean
+  accent?: string
+}
+
 export default function Card({
   children,
   className = '',
   isFiltered = false,
   accent = 'blue',
-}) {
+}: CardProps) {
   const classes = [
     'card',
     className,

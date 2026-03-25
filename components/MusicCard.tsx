@@ -1,4 +1,11 @@
-export default function MusicCard({ isFiltered, track = 'Let It Happen', artist = 'Tame Impala', album = 'Currents' }) {
+interface MusicCardProps {
+  isFiltered?: boolean
+  track?: string
+  artist?: string
+  album?: string
+}
+
+export default function MusicCard({ isFiltered, track = 'Let It Happen', artist = 'Tame Impala', album = 'Currents' }: MusicCardProps) {
   return (
     <div className={`card music-card${isFiltered ? ' filtered-out' : ''}`}>
       <div className="card-inner">

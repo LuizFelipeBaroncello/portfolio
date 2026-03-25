@@ -1,3 +1,4 @@
+import type { AppProps } from 'next/app'
 import Head from 'next/head'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -8,7 +9,7 @@ import '../styles/sun-map.css'
 import '../styles/sun-map-interior.css'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
-export default function App({ Component, pageProps }) {
+export default function App({ Component, pageProps }: AppProps) {
   return (
     <>
       <Head>

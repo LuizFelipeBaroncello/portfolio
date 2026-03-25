@@ -1,6 +1,16 @@
 import ThemeToggle from './ThemeToggle'
 
-export default function FilterBar({ filters, activeFilter, onSetFilter, theme, onToggleTheme, logo, contactHref }) {
+interface FilterBarProps {
+  filters: string[]
+  activeFilter: string
+  onSetFilter: (filter: string) => void
+  theme: string
+  onToggleTheme: () => void
+  logo: string
+  contactHref: string
+}
+
+export default function FilterBar({ filters, activeFilter, onSetFilter, theme, onToggleTheme, logo, contactHref }: FilterBarProps) {
   return (
     <div className="filter-bar-wrapper">
       <span className="header-logo">{logo}</span>

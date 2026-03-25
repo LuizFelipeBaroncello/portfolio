@@ -2,6 +2,71 @@
  * Sun ray intersection math and coordinate conversion for interior building view.
  */
 
+export interface Point2D {
+  x: number
+  z: number
+}
+
+export interface Point3D {
+  x: number
+  y: number
+  z: number
+}
+
+export interface WallNormal {
+  x: number
+  z: number
+}
+
+export interface Wall {
+  wallIndex: number
+  start: Point3D
+  end: Point3D
+  normal: WallNormal
+  length: number
+  height: number
+  midLabel: string
+}
+
+export interface WindowConfig {
+  offsetX: number
+  offsetY: number
+  width: number
+  height: number
+}
+
+export interface Camera {
+  x: number
+  y: number
+  z: number
+  rotY: number
+  rotX: number
+  fov: number
+  width: number
+  height: number
+}
+
+export interface ProjectedPoint {
+  x: number
+  y: number
+  depth: number
+}
+
+export interface Centroid {
+  lng: number
+  lat: number
+}
+
+export interface LocalCoordsResult {
+  localCoords: Point2D[]
+  centroid: Centroid
+}
+
+export interface SunRayPatch {
+  surface: 'floor' | number
+  points: Point3D[]
+}
+
 const DEG2RAD = Math.PI / 180
 const METERS_PER_DEG_LAT = 111320
 
@@ -9,7 +74,7 @@ const METERS_PER_DEG_LAT = 111320
  * Convert polygon coordinates from [lng, lat] to local XZ meter coords
  * relative to the polygon centroid.
  */
-export function latlngToLocalMeters(coordinates, centerLat) {
+export function latlngToLocalMeters(coordinates: [number, number][], centerLat: number): LocalCoordsResult {
   const n = coordinates.length
   let cx = 0, cy = 0
   for (const [lng, lat] of coordinates) {
@@ -34,7 +99,7 @@ export function latlngToLocalMeters(coordinates, centerLat) {
  * Detect polygon orientation via signed area.
  * Returns 1 for CCW, -1 for CW.
  */
-export function getPolygonOrientation(localCoords) {
+export function getPolygonOrientation(localCoords: Point2D[]): number {
   let area = 0
   const n = localCoords.length
   for (let i = 0; i < n; i++) {
@@ -49,9 +114,9 @@ export function getPolygonOrientation(localCoords) {
  * Get wall segments from local meter coordinates.
  * Each wall: { start, end, normal, length, wallIndex, midLabel }
  */
-export function getWallSegments(localCoords, buildingHeight) {
+export function getWallSegments(localCoords: Point2D[], buildingHeight: number): Wall[] {
   const orient = getPolygonOrientation(localCoords)
-  const walls = []
+  const walls: Wall[] = []
   const n = localCoords.length
 
   for (let i = 0; i < n; i++) {
@@ -84,7 +149,7 @@ export function getWallSegments(localCoords, buildingHeight) {
  * Compute the 4 corner points of a window on a wall in 3D.
  * windowConfig: { offsetX (0-1), offsetY (meters from floor), width (m), height (m) }
  */
-export function computeWindowRect(wall, windowConfig) {
+export function computeWindowRect(wall: Wall, windowConfig: WindowConfig): Point3D[] {
   const { offsetX, offsetY, width, height } = windowConfig
   const dx = wall.end.x - wall.start.x
   const dz = wall.end.z - wall.start.z
@@ -114,7 +179,12 @@ export function computeWindowRect(wall, windowConfig) {
  * sunAltitude: degrees above horizon
  * Returns array of {x, y, z} points forming the floor patch polygon, or null if sun doesn't shine through.
  */
-export function computeSunRayPatch(sunAzimuth, sunAltitude, windowCorners, buildingHeight) {
+export function computeSunRayPatch(
+  sunAzimuth: number,
+  sunAltitude: number,
+  windowCorners: Point3D[],
+  buildingHeight: number
+): Point3D[] | null {
   if (sunAltitude <= 0) return null // Sun below horizon
 
   // Sun direction vector (from sun toward ground - reversed ray direction)
@@ -129,7 +199,7 @@ export function computeSunRayPatch(sunAzimuth, sunAltitude, windowCorners, build
   if (sunDirY >= 0) return null // Sun ray going up, no floor patch
 
   // For each window corner, cast a ray in the sun's direction and intersect with floor (y=0)
-  const floorPoints = []
+  const floorPoints: Point3D[] = []
   for (const corner of windowCorners) {
     // Ray: P = corner + t * sunDir
     // Floor: y = 0 => t = -corner.y / sunDirY
@@ -152,7 +222,7 @@ export function computeSunRayPatch(sunAzimuth, sunAltitude, windowCorners, build
  * Ray-wall intersection: find parameter t where ray hits a wall rectangle.
  * Returns t > 0 if intersection is valid (within wall bounds), else null.
  */
-function rayWallIntersect(origin, dir, wall, buildingHeight) {
+function rayWallIntersect(origin: Point3D, dir: Point3D, wall: Wall, buildingHeight: number): number | null {
   const nx = wall.normal.x, nz = wall.normal.z
   const denom = dir.x * nx + dir.z * nz
   if (Math.abs(denom) < 1e-8) return null // parallel to wall
@@ -179,7 +249,13 @@ function rayWallIntersect(origin, dir, wall, buildingHeight) {
  * Compute light patches on all surfaces (floor + walls) from sun rays through a window.
  * Returns array of { surface: 'floor' | wallIndex, points: [{x,y,z}, ...] }.
  */
-export function computeSunRayPatches(sunAzimuth, sunAltitude, windowCorners, buildingHeight, walls) {
+export function computeSunRayPatches(
+  sunAzimuth: number,
+  sunAltitude: number,
+  windowCorners: Point3D[],
+  buildingHeight: number,
+  walls: Wall[]
+): SunRayPatch[] {
   if (sunAltitude <= 0) return []
 
   const azRad = sunAzimuth * DEG2RAD
@@ -191,13 +267,13 @@ export function computeSunRayPatches(sunAzimuth, sunAltitude, windowCorners, bui
 
   if (sunDirY >= 0) return []
 
-  const dir = { x: sunDirX, y: sunDirY, z: sunDirZ }
-  const hitPoints = []
+  const dir: Point3D = { x: sunDirX, y: sunDirY, z: sunDirZ }
+  const hitPoints: Array<Point3D & { surface: 'floor' | number }> = []
 
   for (const corner of windowCorners) {
     let bestT = Infinity
-    let bestHit = null
-    let bestSurface = 'floor'
+    let bestHit: Point3D | null = null
+    let bestSurface: 'floor' | number = 'floor'
 
     // Check floor (y=0)
     const tFloor = -corner.y / sunDirY
@@ -231,14 +307,14 @@ export function computeSunRayPatches(sunAzimuth, sunAltitude, windowCorners, bui
   }
 
   // Group by surface
-  const groups = {}
+  const groups: Record<string, Point3D[]> = {}
   for (const hp of hitPoints) {
     const key = String(hp.surface)
     if (!groups[key]) groups[key] = []
     groups[key].push({ x: hp.x, y: hp.y, z: hp.z })
   }
 
-  const patches = []
+  const patches: SunRayPatch[] = []
   for (const [surface, points] of Object.entries(groups)) {
     if (points.length >= 3) {
       patches.push({
@@ -255,7 +331,7 @@ export function computeSunRayPatches(sunAzimuth, sunAltitude, windowCorners, bui
  * Check if the sun faces a wall (i.e., sunlight hits the exterior of this wall).
  * Returns true if the sun direction has a component toward the wall's normal.
  */
-export function sunFacesWall(sunAzimuth, sunAltitude, wallNormal) {
+export function sunFacesWall(sunAzimuth: number, sunAltitude: number, wallNormal: WallNormal): boolean {
   if (sunAltitude <= 0) return false
 
   const azRad = sunAzimuth * DEG2RAD
@@ -273,7 +349,7 @@ export function sunFacesWall(sunAzimuth, sunAltitude, wallNormal) {
  * Simple perspective projection for 3D -> 2D.
  * camera: { x, y, z, rotY (radians), rotX (radians), fov (degrees), width, height }
  */
-export function projectPoint(point, camera) {
+export function projectPoint(point: Point3D, camera: Camera): ProjectedPoint | null {
   // Translate to camera space
   let dx = point.x - camera.x
   let dy = point.y - camera.y
@@ -307,7 +383,14 @@ export function projectPoint(point, camera) {
 /**
  * Compute camera position inside a building (at center, eye height).
  */
-export function getInteriorCamera(localCoords, buildingHeight, viewAngle, viewPitch, canvasWidth, canvasHeight) {
+export function getInteriorCamera(
+  localCoords: Point2D[],
+  buildingHeight: number,
+  viewAngle: number,
+  viewPitch: number,
+  canvasWidth: number,
+  canvasHeight: number
+): Camera {
   let cx = 0, cz = 0
   for (const p of localCoords) {
     cx += p.x

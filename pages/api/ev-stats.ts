@@ -1,3 +1,4 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { createServiceClient } from '../../lib/supabase'
 
 const NUMERIC_FIELDS = [
@@ -10,7 +11,7 @@ const NUMERIC_FIELDS = [
   'total_geral'
 ]
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -25,8 +26,8 @@ export default async function handler(req, res) {
   }
 
   // Normalize: ensure all numeric values are positive
-  const normalized = (data || []).map((row) => {
-    const out = { mes: row.mes }
+  const normalized = (data || []).map((row: any) => {
+    const out: Record<string, any> = { mes: row.mes }
     for (const field of NUMERIC_FIELDS) {
       out[field] = Math.abs(Number(row[field]) || 0)
     }

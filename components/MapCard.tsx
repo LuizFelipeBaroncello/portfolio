@@ -1,4 +1,8 @@
-export default function MapCard({ isFiltered }) {
+interface MapCardProps {
+  isFiltered?: boolean
+}
+
+export default function MapCard({ isFiltered }: MapCardProps) {
   return (
     <div className={`card map-card${isFiltered ? ' filtered-out' : ''}`}>
       <div className="card-inner">

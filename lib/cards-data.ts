@@ -1,6 +1,31 @@
-export const CATEGORY_FILTERS = ['All', 'About', 'Projects', 'Media']
+export interface CardData {
+  id: string
+  type: string
+  tags: string[]
+  title?: string
+  description?: string
+  accent?: string
+  link?: string
+}
 
-export const CARDS_DATA = [
+export interface GridItem {
+  i: string
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+export interface GridLayouts {
+  lg: GridItem[]
+  md: GridItem[]
+  sm: GridItem[]
+  [key: string]: GridItem[]
+}
+
+export const CATEGORY_FILTERS: string[] = ['All', 'About', 'Projects', 'Media']
+
+export const CARDS_DATA: CardData[] = [
   {
     id: 'bio',
     type: 'bio',
@@ -58,7 +83,7 @@ export const CARDS_DATA = [
   },
 ]
 
-export const GRID_LAYOUTS = {
+export const GRID_LAYOUTS: GridLayouts = {
   lg: [
     { i: 'bio', x: 0, y: 0, w: 5, h: 2 },
     { i: 'map', x: 5, y: 0, w: 4, h: 2 },
