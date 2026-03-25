@@ -34,3 +34,6 @@ yarn-error.log*
 .vercel
 
 public/feed.xml
+
+# Claude agent worktrees
+.claude/worktrees/
