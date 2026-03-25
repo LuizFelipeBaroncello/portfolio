@@ -13,6 +13,12 @@ import {
   planTypeLabel,
   planDescription,
 } from '../lib/amortizacao'
+import {
+  AmortCompositionChart,
+  BalanceChart,
+  AccumulatedCostChart,
+  CompareBalanceChart as RechartsCompareBalanceChart,
+} from '../components/amortizacao/AmortizacaoCharts'
 
 interface ScheduleRow {
   month: number
