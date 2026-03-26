@@ -169,6 +169,24 @@
   margin: 0 0 10px;
 }
 
+/* Hide walls toggle */
+.sm-interior-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: var(--font-main);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.sm-interior-toggle input[type='checkbox'] {
+  accent-color: var(--accent-orange, #f97316);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
 /* Wall list */
 .sm-interior-wall-list {
   display: flex;

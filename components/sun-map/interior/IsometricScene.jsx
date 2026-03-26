@@ -56,7 +56,7 @@ function SunLight({ sunPos, center }) {
   )
 }
 
-function Scene({ localCoords, walls, windowConfigs, sunPos, buildingHeight, cameraAngle }) {
+function Scene({ localCoords, walls, windowConfigs, sunPos, buildingHeight, cameraAngle, hideNearWalls }) {
   const center = useMemo(() => {
     let cx = 0, cz = 0
     for (const p of localCoords) {
@@ -79,6 +79,7 @@ function Scene({ localCoords, walls, windowConfigs, sunPos, buildingHeight, came
         windowConfigs={windowConfigs}
         buildingHeight={buildingHeight}
         cameraAngle={cameraAngle}
+        hideNearWalls={hideNearWalls}
       />
       <WindowMeshes walls={walls} windowConfigs={windowConfigs} />
       <SunPatches
@@ -91,7 +92,7 @@ function Scene({ localCoords, walls, windowConfigs, sunPos, buildingHeight, came
   )
 }
 
-export default function IsometricScene({ localCoords, walls, windowConfigs, sunPos, buildingHeight }) {
+export default function IsometricScene({ localCoords, walls, windowConfigs, sunPos, buildingHeight, hideNearWalls }) {
   const controls = useIsometricControls(8)
   const containerRef = useRef(null)
 
@@ -135,6 +136,7 @@ export default function IsometricScene({ localCoords, walls, windowConfigs, sunP
           sunPos={sunPos}
           buildingHeight={buildingHeight}
           cameraAngle={controls.angle}
+          hideNearWalls={hideNearWalls}
         />
       </Canvas>
     </div>

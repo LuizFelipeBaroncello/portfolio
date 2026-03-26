@@ -62,6 +62,7 @@ export default function InteriorView({
 }) {
   const [selectedWallIndex, setSelectedWallIndex] = useState(null)
   const [windowConfigs, setWindowConfigs] = useState(() => building.windows || [])
+  const [hideNearWalls, setHideNearWalls] = useState(true)
 
   // Wall modifications: { [wallIndex]: { lengthDelta, offsetDelta } }
   const [wallMods, setWallMods] = useState({})
@@ -139,6 +140,7 @@ export default function InteriorView({
             windowConfigs={windowConfigs}
             sunPos={sunPos}
             buildingHeight={building.height}
+            hideNearWalls={hideNearWalls}
           />
           <div className="sm-interior-canvas-hint">
             Clique para girar 90&deg; &middot; Arraste para girar livre &middot; Scroll para zoom
@@ -146,6 +148,17 @@ export default function InteriorView({
         </div>
 
         <div className="sm-interior-sidebar">
+          <div className="sm-interior-section">
+            <label className="sm-interior-toggle">
+              <input
+                type="checkbox"
+                checked={hideNearWalls}
+                onChange={(e) => setHideNearWalls(e.target.checked)}
+              />
+              <span>Esconder paredes proximas</span>
+            </label>
+          </div>
+
           <div className="sm-interior-section">
             <h4 className="sm-interior-section-title">Paredes</h4>
             <div className="sm-interior-wall-list">

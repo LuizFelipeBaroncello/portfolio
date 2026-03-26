@@ -26,22 +26,7 @@ function Floor({ localCoords }) {
   )
 }
 
-function Ceiling({ localCoords, buildingHeight }) {
-  const geometry = useMemo(() => {
-    const shape = createFloorShape(localCoords)
-    const geo = new THREE.ShapeGeometry(shape)
-    geo.rotateX(-Math.PI / 2)
-    return geo
-  }, [localCoords])
-
-  return (
-    <mesh geometry={geometry} position={[0, buildingHeight, 0]}>
-      <meshLambertMaterial color="#e8e6e0" transparent opacity={0.25} side={THREE.DoubleSide} />
-    </mesh>
-  )
-}
-
-function WallMesh({ wall, buildingHeight, windowConfigs, cameraAngle }) {
+function WallMesh({ wall, buildingHeight, windowConfigs, cameraAngle, hideNearWalls }) {
   const { geometry, windowHoles } = useMemo(() => {
     const dx = wall.end.x - wall.start.x
     const dz = wall.end.z - wall.start.z
@@ -87,13 +72,18 @@ function WallMesh({ wall, buildingHeight, windowConfigs, cameraAngle }) {
     }
   }, [wall])
 
-  // Cutaway: make wall transparent if it faces the camera
-  const opacity = useMemo(() => {
+  // Cutaway: hide or fade wall if it faces the camera
+  const facesCamera = useMemo(() => {
     const camDirX = Math.sin(cameraAngle)
     const camDirZ = Math.cos(cameraAngle)
     const dot = wall.normal.x * camDirX + wall.normal.z * camDirZ
-    return dot > 0.1 ? 0.08 : 0.85
+    return dot > 0.1
   }, [wall.normal, cameraAngle])
+
+  // When hideNearWalls is on, completely hide camera-facing walls
+  if (hideNearWalls && facesCamera) return null
+
+  const opacity = facesCamera ? 0.08 : 0.85
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
@@ -115,11 +105,10 @@ function WallMesh({ wall, buildingHeight, windowConfigs, cameraAngle }) {
   )
 }
 
-export default function RoomGeometry({ localCoords, walls, windowConfigs, buildingHeight, cameraAngle }) {
+export default function RoomGeometry({ localCoords, walls, windowConfigs, buildingHeight, cameraAngle, hideNearWalls }) {
   return (
     <group>
       <Floor localCoords={localCoords} />
-      <Ceiling localCoords={localCoords} buildingHeight={buildingHeight} />
       {walls.map((wall) => (
         <WallMesh
           key={wall.wallIndex}
@@ -127,6 +116,7 @@ export default function RoomGeometry({ localCoords, walls, windowConfigs, buildi
           buildingHeight={buildingHeight}
           windowConfigs={windowConfigs}
           cameraAngle={cameraAngle}
+          hideNearWalls={hideNearWalls}
         />
       ))}
     </group>
