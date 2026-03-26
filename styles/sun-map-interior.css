@@ -115,17 +115,12 @@
   overflow: hidden;
 }
 
-/* Canvas area */
+/* 3D Scene area */
 .sm-interior-canvas-wrap {
   flex: 1;
   position: relative;
   min-width: 0;
-}
-
-.sm-interior-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
+  overflow: hidden;
 }
 
 .sm-interior-canvas-hint {

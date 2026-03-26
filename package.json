@@ -10,6 +10,8 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
     "@supabase/supabase-js": "^2.99.3",
     "maplibre-gl": "^5.21.0",
     "next": "^14.2.5",
@@ -17,7 +19,8 @@
     "react-dom": "^18.2.0",
     "react-grid-layout": "^2.2.2",
     "recharts": "^3.8.1",
-    "suncalc": "^1.9.0"
+    "suncalc": "^1.9.0",
+    "three": "^0.183.2"
   },
   "prettier": {
     "arrowParens": "always",
@@ -32,10 +35,10 @@
     "@babel/preset-react": "^7.28.5",
     "@babel/preset-typescript": "^7.28.5",
     "@types/node": "^25.5.0",
-    "@types/react": "^19.2.14",
+    "@types/react": "19.2.14",
     "@types/react-dom": "^19.2.3",
     "babel-jest": "^30.3.0",
     "jest": "^30.3.0",
-    "typescript": "^6.0.2"
+    "typescript": "6.0.2"
   }
 }
