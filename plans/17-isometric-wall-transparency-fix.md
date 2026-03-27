@@ -1,15 +1,16 @@
-# 17 - Corrigir visao isometrica: chao desalinhado e parede translucida errada
+# 17 - Corrigir visao isometrica: chao desalinhado, parede translucida errada e rotacao do sol
 
 **Prioridade:** 17 (bug fix)
 **Categoria:** Sun Map - Interior View
 
 ## Contexto
 
-Na visao isometrica do interior de um predio, dois problemas visuais existem:
-1. O chao continua desalinhado (provavelmente nao esta no plano correto ou as coordenadas estao deslocadas)
-2. A parede que fica translucida nao e a mais proxima da camera, mas sim a mais distante — o comportamento esta invertido
+Na visao isometrica do interior de um predio, tres problemas visuais existem:
+1. O chao ja comeca desalinhado desde a geracao inicial (nao e causado por wallMods)
+2. A parede que fica translucida nao e a mais proxima da camera, mas sim a mais distante — comportamento invertido
+3. A direcao do sol esta errada — sol saindo de uma janela no oeste aparece como se viesse do norte. Ha um problema de rotacao no mapeamento de azimuth para o sistema de coordenadas 3D
 
-## Problema: Parede translucida invertida
+## Problema 1: Parede translucida invertida
 
 Em `components/sun-map/interior/RoomGeometry.jsx`, linhas ~76-81:
 
@@ -22,32 +23,48 @@ const facesCamera = useMemo(() => {
 }, [wall.normal, cameraAngle])
 ```
 
-O dot product positivo significa que a normal da parede aponta na mesma direcao da camera — ou seja, a parede esta de COSTAS para a camera (a face visivel e a de tras). Porem, a logica de transparencia trata `facesCamera = true` como "parede proxima", quando na verdade deveria ser o OPOSTO.
+O dot product positivo significa que a normal da parede aponta na mesma direcao da camera — ou seja, a parede esta de COSTAS para a camera. Porem, a logica trata `facesCamera = true` como "parede proxima", quando deveria ser o oposto.
 
-A parede que deve ficar translucida e aquela cuja normal aponta PARA a camera (dot product negativo), pois essa e a parede entre a camera e o interior.
-
-### Correcao da deteccao de parede proxima
+### Correcao
 - [ ] Em `RoomGeometry.jsx`, linha ~80, inverter a condicao:
-  - De: `return dot > 0.1` (normal aponta na direcao da camera = costas para camera)
-  - Para: `return dot < -0.1` (normal aponta contra a camera = face voltada para camera = parede proxima)
+  - De: `return dot > 0.1`
+  - Para: `return dot < -0.1`
 - [ ] Testar: ao rotacionar a camera, a parede mais proxima (entre voce e o interior) deve ficar translucida/escondida
 
-## Problema: Chao desalinhado
+## Problema 2: Chao desalinhado na geracao inicial
 
-O chao e gerado em `RoomGeometry.jsx` a partir das coordenadas locais do edificio. Possiveis causas:
+O chao ja comeca desalinhado — o problema esta na geracao inicial, nao nos wallMods.
 
 ### Investigacao
-- [ ] Verificar se as coordenadas do chao (`localCoords`) estao no mesmo sistema de coordenadas que as paredes
-- [ ] Verificar se o `applyWallMods()` em `InteriorView.js` altera as coordenadas das paredes mas NAO atualiza o chao (se o chao e gerado das coordenadas originais e as paredes das modificadas, ficam desalinhados)
-- [ ] Verificar a rotacao do Shape do chao — `ShapeGeometry` cria no plano XY, mas o chao deve estar no plano XZ. Confirmar que a `rotation.x = -Math.PI / 2` esta aplicada corretamente
+- [ ] Em `RoomGeometry.jsx`, verificar como o `THREE.Shape` do chao e criado a partir de `localCoords`
+- [ ] `ShapeGeometry` cria geometria no plano XY. Para usar como chao (plano XZ), precisa de `rotation.x = -Math.PI / 2`. Verificar se essa rotacao esta aplicada corretamente
+- [ ] Verificar se as coordenadas `localCoords` passadas para o chao estao no sistema correto (x,z para o plano horizontal)
+- [ ] Verificar se o centroide usado para centralizar o chao e o mesmo usado para as paredes
 
 ### Possiveis correcoes
-- [ ] Se o problema for coordenadas: garantir que chao e paredes usam o mesmo array `localCoords` (ja com wallMods aplicados)
-- [ ] Se o problema for rotacao: ajustar a rotacao do mesh do chao
-- [ ] Se o problema for centralizacao: verificar se o centroide usado para centralizar o chao coincide com o das paredes
+- [ ] Se o Shape esta usando coordenadas (x,y) mas as paredes usam (x,z): converter adequadamente ao criar o Shape
+- [ ] Se a rotacao esta errada ou ausente: aplicar `rotation.x = -Math.PI / 2` no mesh do chao
+- [ ] Se o centroide diverge: unificar o calculo de centro entre chao e paredes
+
+## Problema 3: Rotacao do sol incorreta
+
+O sol aparenta estar vindo da direcao errada (ex: janela oeste mostra sol vindo do norte). Ha um erro no mapeamento do azimuth solar para o sistema de coordenadas 3D.
+
+### Investigacao
+- [ ] Em `components/sun-map/interior/IsometricScene.jsx`, verificar como o azimuth e altitude do sol sao convertidos para a posicao da luz direcional
+- [ ] Em `lib/sun-ray-utils.ts`, verificar como o azimuth e convertido para direcao dos raios solares que geram os patches no chao
+- [ ] Identificar a convencao de azimuth usada pelo SunCalc (0=Norte, 90=Leste, 180=Sul, 270=Oeste) vs a convencao do sistema de coordenadas 3D
+- [ ] Verificar se a conversao lat/lng para metros locais em `sun-ray-utils.ts` preserva a orientacao correta (norte/sul/leste/oeste)
+
+### Possiveis correcoes
+- [ ] Pode ser necessario adicionar um offset de rotacao (ex: -90 graus) na conversao azimuth → direcao 3D
+- [ ] Ou inverter algum eixo na conversao de coordenadas
+- [ ] Corrigir tanto a luz direcional (IsometricScene) quanto os sun patches (SunPatches.jsx via sun-ray-utils)
 
 ### Validacao
+- [ ] Testar com sol no Leste (manha) — luz deve entrar por janelas voltadas para Leste
+- [ ] Testar com sol no Oeste (tarde) — luz deve entrar por janelas voltadas para Oeste
 - [ ] Testar com diferentes edificios (3, 4, 5+ lados)
-- [ ] Testar apos ajustar paredes (comprimento/deslocamento) — chao deve acompanhar
 - [ ] Rotacionar a camera 360 graus — a parede correta deve ficar translucida em cada angulo
+- [ ] Verificar que chao e paredes estao alinhados desde o inicio (sem wallMods)
 - [ ] Rodar `npm run build`

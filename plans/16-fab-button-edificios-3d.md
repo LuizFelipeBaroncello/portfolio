@@ -5,24 +5,23 @@
 
 ## Contexto
 
-Adicionar um botao flutuante (FAB - Floating Action Button) no estilo Material UI no canto inferior direito do mapa que abre o modal de edificios 3D.
+Adicionar um botao flutuante (FAB - Floating Action Button) no estilo Material UI no canto inferior direito do mapa. O botao abre o modal de edificios 3D, que oferece a opcao de adicionar um novo edificio. O botao deve estar sempre visivel, independentemente de haver edificios customizados ou nao.
 
 ## Design
 
-- Botao redondo com icone "+" (ou icone de edificio/cubo 3D)
+- Botao redondo com icone "+" generico
 - Posicionado no canto inferior direito do mapa, com margem de ~16-24px
 - Estilo Material Design: sombra elevada, cor de destaque, hover com leve elevacao
 - Deve respeitar o tema claro/escuro
 - Z-index acima do mapa mas abaixo de modais
+- Sempre visivel (nao depende de estado de edificios)
 
 ## Tarefas
 
 ### Criar o botao FAB
-- [ ] Em `pages/sun-map.tsx`, adicionar um `<button>` com classe CSS tipo `sm-fab-interior` posicionado absolutamente dentro do container do mapa
-- [ ] O botao deve chamar uma funcao que abre o modal:
-  - Se ha um edificio selecionado (`selectedBuildingIdx !== null`), abrir o modal para esse edificio
-  - Se nao ha edificio selecionado mas existe pelo menos um edificio customizado, abrir para o primeiro (ou mostrar a lista)
-  - Se nao ha edificios customizados, mostrar feedback ao usuario (ex: tooltip "Desenhe um edificio primeiro")
+- [ ] Em `pages/sun-map.tsx`, adicionar um `<button>` com classe CSS `sm-fab-interior` posicionado absolutamente dentro do container do mapa
+- [ ] O botao deve estar sempre visivel e ao clicar abre o modal de edificios 3D
+- [ ] O modal aberto pelo FAB deve dar a opcao de adicionar um novo edificio
 
 ### Estilizar o FAB
 - [ ] Em `styles/sun-map.css`, adicionar estilos:
@@ -52,12 +51,12 @@ Adicionar um botao flutuante (FAB - Floating Action Button) no estilo Material U
 - [ ] Adicionar cores para tema claro e escuro (usar variaveis CSS existentes ou definir novas)
 
 ### Icone
-- [ ] Usar um SVG inline de "+" ou um icone de cubo/edificio 3D
+- [ ] Usar um SVG inline de "+" generico
 - [ ] O icone deve ser visivel em ambos os temas
 
 ### Validacao
-- [ ] Testar com edificio selecionado — deve abrir modal do edificio correto
-- [ ] Testar sem edificio selecionado — comportamento adequado
+- [ ] Testar que o botao esta sempre visivel (com e sem edificios)
+- [ ] Testar que clicar no FAB abre o modal com opcao de adicionar edificio
 - [ ] Testar em ambos os temas
 - [ ] Verificar que nao obstrui controles existentes do mapa
 - [ ] Rodar `npm run build`

@@ -5,7 +5,7 @@
 
 ## Contexto
 
-O ajuste de paredes no modal de interior permite alterar Comprimento e Deslocamento por parede. Porem, o comportamento atual nao e conforme o esperado — cada parede deveria poder ser ajustada de forma totalmente independente sem afetar as outras.
+O ajuste de paredes no modal de interior permite alterar Comprimento e Deslocamento por parede. Porem, o comportamento atual nao e conforme o esperado — cada parede deve poder ser ajustada de forma totalmente independente, sem mover ou afetar as paredes vizinhas. Pode haver "buracos" entre paredes, e isso e aceitavel.
 
 ## Analise do codigo atual
 
@@ -16,41 +16,40 @@ Em `components/sun-map/InteriorView.js`:
 
 O problema esta na funcao `applyWallMods()` (linhas ~525-565):
 
-### Problema 1: Vertices compartilhados
-- Cada parede compartilha vertices com as paredes adjacentes (vertice 0-1 da parede A e vertice 1 da parede anterior)
-- Quando se ajusta o comprimento ou offset de uma parede, os vertices movidos afetam as paredes vizinhas
-- O resultado e que ajustar uma parede "arrasta" as adjacentes
+### Problema: Vertices compartilhados
+- O sistema atual opera sobre um array de coordenadas do poligono, onde cada vertice e compartilhado entre duas paredes adjacentes
+- Quando se ajusta uma parede, os vertices movidos afetam as paredes vizinhas
+- Isso impede ajustes verdadeiramente independentes
 
-### Problema 2: Aplicacao sequencial
-- As modificacoes sao aplicadas sequencialmente sobre as coordenadas, entao a ordem importa e pode causar acumulo de erros
+## Nova abordagem: Paredes como segmentos independentes
 
-## Tarefas
+Em vez de operar sobre vertices de um poligono, cada parede deve ser tratada como um segmento independente com seus proprios dois endpoints.
 
-### Redesenhar a logica de aplicacao de wallMods
-- [ ] Estudar a funcao `applyWallMods()` em detalhe (linhas ~525-565 de InteriorView.js)
-- [ ] Identificar exatamente como os vertices compartilhados estao sendo manipulados
+### Tarefas
 
-### Implementar ajuste verdadeiramente independente
-- [ ] **Para comprimento (lengthDelta):** Cada parede deve expandir/contrair simetricamente a partir do seu centro, mas os vertices resultantes devem ser reconciliados com as paredes adjacentes. Opcoes:
-  - Calcular a nova posicao dos vertices de cada parede independentemente, depois recalcular as intersecoes com paredes adjacentes
-  - Ou: mover os vertices de cada parede e interpolar as juncoes
+### Redesenhar a estrutura de dados
+- [ ] Mudar a representacao interna: em vez de um array de vertices do poligono, cada parede deve armazenar seus proprios dois pontos (start, end)
+- [ ] Inicializar cada parede a partir das coordenadas originais do edificio
+- [ ] Manter `wallMods` como esta (por indice, com `lengthDelta` e `offsetDelta`)
 
-- [ ] **Para offset (offsetDelta):** Mover a parede ao longo da sua normal sem alterar as paredes vizinhas. As paredes adjacentes devem ser estendidas/encurtadas para encontrar a parede deslocada (intersecao de linhas).
+### Reimplementar `applyWallMods()`
+- [ ] **Comprimento (lengthDelta):** Expandir/contrair a parede simetricamente a partir do seu centro, movendo apenas os endpoints dessa parede
+- [ ] **Offset (offsetDelta):** Mover a parede inteira ao longo da sua normal, sem tocar nas paredes vizinhas
+- [ ] As paredes vizinhas NAO devem ser afetadas — buracos entre paredes sao aceitaveis
 
-### Abordagem sugerida: intersecao de retas
-- [ ] Para cada parede, calcular a reta (linha infinita) da parede ajustada
-- [ ] Para cada par de paredes adjacentes, calcular o ponto de intersecao das duas retas
-- [ ] Usar esses pontos de intersecao como os novos vertices do poligono
-- [ ] Isso garante que cada parede pode ser movida/redimensionada independentemente e o poligono se ajusta automaticamente
+### Atualizar RoomGeometry.jsx
+- [ ] Adaptar a renderizacao das paredes para usar segmentos independentes em vez de vertices compartilhados
+- [ ] O chao pode continuar usando as coordenadas originais (ou as coordenadas ajustadas, conforme fizer mais sentido visualmente)
 
-### Atualizar a UI se necessario
-- [ ] Verificar se os sliders e labels refletem corretamente o estado de cada parede
+### Atualizar a UI
+- [ ] Verificar se os sliders e labels refletem corretamente o estado de cada parede independente
 - [ ] Considerar adicionar um botao "Reset" por parede para voltar ao estado original
 
 ### Validacao
-- [ ] Ajustar uma parede e verificar que as adjacentes NAO mudam de posicao (apenas se estendem/encurtam para encontrar a parede ajustada)
+- [ ] Ajustar uma parede e verificar que as adjacentes NAO se movem de forma alguma
+- [ ] Ajustar offset de uma parede — deve criar um "buraco" visivel entre ela e as vizinhas
+- [ ] Ajustar comprimento — deve expandir/contrair simetricamente sem afetar vizinhas
 - [ ] Ajustar multiplas paredes independentemente
-- [ ] Verificar que o chao acompanha as novas coordenadas
 - [ ] Verificar que janelas continuam posicionadas corretamente nas paredes ajustadas
 - [ ] Salvar e reabrir — verificar persistencia das modificacoes
 - [ ] Rodar `npm run build`
