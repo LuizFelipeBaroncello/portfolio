@@ -426,18 +426,29 @@ a {
 
 /* ===== Bio Card ===== */
 .bio-card .bio-avatar {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
+}
+
+.bio-card .bio-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
   margin-bottom: 16px;
 }
 
-.bio-card .bio-intro {
-  font-size: 15px;
-  color: var(--text-secondary);
-  line-height: 1.7;
+.bio-card .bio-header-text {
   flex: 1;
+}
+
+.bio-card .bio-intro {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
 }
 
 .bio-card .bio-intro strong {
@@ -446,10 +457,91 @@ a {
 }
 
 .bio-card .bio-name {
-  font-size: 22px;
+  font-size: 18px;
   font-variation-settings: 'wght' 800;
   color: var(--text-primary);
   letter-spacing: -0.04em;
+}
+
+.bio-card .bio-section-label {
+  font-size: 10px;
+  font-variation-settings: 'wght' 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.bio-card .bio-experience {
+  margin-bottom: 14px;
+}
+
+.bio-card .bio-experience-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bio-card .bio-experience-item {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding-left: 12px;
+  position: relative;
+}
+
+.bio-card .bio-experience-item::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: var(--accent-blue);
+  font-size: 10px;
+  top: 1px;
+}
+
+.bio-card .bio-stack {
+  margin-top: auto;
+}
+
+.bio-card .bio-stack-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bio-card .bio-stack-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.bio-card .bio-stack-area {
+  font-size: 11px;
+  font-variation-settings: 'wght' 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding-top: 2px;
+  min-width: 72px;
+}
+
+.bio-card .bio-stack-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.bio-card .bio-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--bg-tag, rgba(120, 120, 120, 0.12));
+  color: var(--text-secondary);
+  font-variation-settings: 'wght' 500;
+  border: 1px solid var(--border-subtle, rgba(120, 120, 120, 0.15));
 }
 
 /* ===== Map Card ===== */

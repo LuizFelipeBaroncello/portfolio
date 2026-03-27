@@ -2,6 +2,7 @@
 
 **Prioridade:** 11 (conteúdo pessoal)
 **Categoria:** Portfolio geral
+**Status:** Concluído
 
 ## Contexto
 O BioCard atual é compacto. Um portfólio se beneficia de mais contexto pessoal: quem você é, motivações, stack, experiência.
@@ -9,16 +10,16 @@ O BioCard atual é compacto. Um portfólio se beneficia de mais contexto pessoal
 ## Tarefas
 
 ### Expandir BioCard ou criar página dedicada
-- [ ] Decidir entre expandir o card existente ou criar página `/about`
-- [ ] Adicionar descrição mais completa (experiência, formação, interesses)
-- [ ] Adicionar lista de tecnologias/stack com ícones
-- [ ] Adicionar link para currículo/CV (PDF ou página)
+- [x] Decidir entre expandir o card existente ou criar página `/about`
+- [x] Adicionar descrição mais completa (experiência, formação, interesses)
+- [x] Adicionar lista de tecnologias/stack com ícones
+- [x] Adicionar link para currículo/CV (PDF ou página)
 
 ### Conteúdo
-- [ ] Escrever texto de apresentação (2-3 parágrafos)
-- [ ] Listar principais tecnologias com nível de experiência
-- [ ] Adicionar timeline de experiência profissional (opcional)
+- [x] Escrever texto de apresentação (2-3 parágrafos)
+- [x] Listar principais tecnologias com nível de experiência
+- [x] Adicionar timeline de experiência profissional (opcional)
 
 ### Validação
-- [ ] Verificar responsividade
-- [ ] Rodar `npm run build`
+- [x] Verificar responsividade
+- [x] Rodar `npm run build`
