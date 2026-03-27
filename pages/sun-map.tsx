@@ -226,6 +226,9 @@ export default function SunMap() {
   const [yearProgress, setYearProgress] = useState(0)
   const yearProgressRef = useRef(0)
 
+  // How it works panel state
+  const [showHowItWorks, setShowHowItWorks] = useState(false)
+
   // Interior view state
   const [showInterior, setShowInterior] = useState(false)
   const [interiorBuildingIdx, setInteriorBuildingIdx] = useState(null)
@@ -771,6 +774,16 @@ export default function SunMap() {
         </div>
         <div className="sm-header-right">
           <button
+            className={`sm-build-toggle ${showHowItWorks ? 'active' : ''}`}
+            onClick={() => setShowHowItWorks(!showHowItWorks)}
+            title="Como funciona"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4M12 8h.01" />
+            </svg>
+          </button>
+          <button
             className={`sm-build-toggle ${showBuildingPanel ? 'active' : ''}`}
             onClick={() => {
               setShowBuildingPanel(!showBuildingPanel)
@@ -798,6 +811,27 @@ export default function SunMap() {
           </button>
         </div>
       </div>
+
+      {/* Como funciona Panel */}
+      {showHowItWorks && (
+        <div className="sm-info-panel sm-how-it-works-panel">
+          <div className="sm-info-title">Como funciona</div>
+          <ul className="sm-how-list">
+            <li className="sm-how-item">
+              <span className="sm-how-icon">☀️</span>
+              Usa dados astronomicos reais (suncalc) para calcular azimute e altitude solar em qualquer horario e localizacao.
+            </li>
+            <li className="sm-how-item">
+              <span className="sm-how-icon">🗺️</span>
+              Renderiza edificios 3D via MapLibre GL com dados OpenStreetMap para uma visualizacao realista do ambiente urbano.
+            </li>
+            <li className="sm-how-item">
+              <span className="sm-how-icon">🔺</span>
+              Projeta poligonos de sombra via geometria vetorial em tempo real, calculando o comprimento e direcao das sombras a partir da altitude solar.
+            </li>
+          </ul>
+        </div>
+      )}
 
       {/* Building Panel */}
       {showBuildingPanel && (
