@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Head from 'next/head'
 import { useTheme } from '../lib/use-theme'
+import ErrorMessage from '../components/ErrorMessage'
 
 interface Category {
   key: string
@@ -439,7 +440,9 @@ export default function EVStats() {
   }, [])
 
   // Fetch data and merge mileage
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    setError(null)
     fetch('/api/ev-stats')
       .then((r) => {
         if (!r.ok) throw new Error('Erro ao carregar dados')
@@ -460,6 +463,10 @@ export default function EVStats() {
         setLoading(false)
       })
   }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   // Toggle a category
   const toggleCategory = useCallback(
@@ -578,9 +585,7 @@ export default function EVStats() {
         )}
 
         {error && (
-          <div className="ev-error">
-            <p>Erro: {error}</p>
-          </div>
+          <ErrorMessage message={error} onRetry={fetchData} />
         )}
 
         {!loading && !error && (

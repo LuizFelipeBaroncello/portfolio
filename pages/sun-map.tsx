@@ -29,6 +29,7 @@ import {
 } from '../lib/sun-map-config'
 import InteriorView from '../components/sun-map/InteriorView'
 import SunMapControls from '../components/sun-map/SunMapControls'
+import ErrorMessage from '../components/ErrorMessage'
 
 function loadCustomBuildings() {
   try {
@@ -194,6 +195,7 @@ export default function SunMap() {
   const shadowThrottleRef = useRef(null)
 
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [mapError, setMapError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [currentMinutes, setCurrentMinutes] = useState(() => {
     const now = new Date()
@@ -291,21 +293,33 @@ export default function SunMap() {
     if (!container) return
 
     import('maplibre-gl').then(({ default: maplibregl }) => {
-      const map = new maplibregl.Map({
-        container: container,
-        style: getMapStyle(theme),
-        center: [lng, lat],
-        zoom: DEFAULT_ZOOM,
-        pitch: 60,
-        bearing: -30,
-        antialias: true,
-        dragRotate: true,
-        touchPitch: true,
-        touchZoomRotate: true,
-      } as any)
+      let map: any
+      try {
+        map = new maplibregl.Map({
+          container: container,
+          style: getMapStyle(theme),
+          center: [lng, lat],
+          zoom: DEFAULT_ZOOM,
+          pitch: 60,
+          bearing: -30,
+          antialias: true,
+          dragRotate: true,
+          touchPitch: true,
+          touchZoomRotate: true,
+        } as any)
+      } catch (err: any) {
+        setMapError(err?.message || 'Falha ao inicializar o mapa.')
+        return
+      }
 
       // No default nav control — user controls via mouse drag
       // Right-click drag = rotate, Ctrl+drag = pitch
+
+      map.on('error', (e: any) => {
+        if (!mapRef.current) {
+          setMapError(e?.error?.message || 'Erro ao carregar o mapa.')
+        }
+      })
 
       map.on('load', () => {
         const initialSun = getSunPosition(lat, lng, new Date())
@@ -332,9 +346,8 @@ export default function SunMap() {
         setBearing(map.getBearing())
       })
 
-      map.on('error', (e) => {
-        console.error('MapLibre error:', e.error)
-      })
+    }).catch((err: any) => {
+      setMapError(err?.message || 'Falha ao carregar o mapa.')
     })
   }, [])
 
@@ -751,10 +764,16 @@ export default function SunMap() {
         style={{ background: getSkyGradient(sunPos.altitude) }}
       />
 
-      {/* Loading */}
-      <div className={`sm-loading ${mapLoaded ? 'hidden' : ''}`}>
-        <span className="sm-loading-text">Carregando mapa...</span>
-      </div>
+      {/* Loading / Error */}
+      {mapError ? (
+        <div className="sm-loading" style={{ flexDirection: 'column' }}>
+          <ErrorMessage message={mapError} />
+        </div>
+      ) : (
+        <div className={`sm-loading ${mapLoaded ? 'hidden' : ''}`}>
+          <span className="sm-loading-text">Carregando mapa...</span>
+        </div>
+      )}
 
       {/* Header */}
       <div className="sm-header">
