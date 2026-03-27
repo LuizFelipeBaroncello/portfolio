@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useRef } from 'react'
 import Head from 'next/head'
 import { useTheme } from '../lib/use-theme'
 import {
@@ -79,6 +79,9 @@ export default function Amortizacao() {
   // Table visibility
   const [showTable, setShowTable] = useState(false)
 
+  // Calculation error
+  const [calcError, setCalcError] = useState<string | null>(null)
+
   // Compare mode
   const [compareMode, setCompareMode] = useState(false)
   const [strategies, setStrategies] = useState([
@@ -130,17 +133,24 @@ export default function Amortizacao() {
   // Generate schedule
   const schedule = useMemo(() => {
     if (!loanAmount || !installments || !interestRate) return []
-    return generateSchedule({
-      loanAmount,
-      startDate,
-      system,
-      interestRate,
-      rateType,
-      installments,
-      plans,
-      correction,
-      insurance,
-    })
+    try {
+      const result = generateSchedule({
+        loanAmount,
+        startDate,
+        system,
+        interestRate,
+        rateType,
+        installments,
+        plans,
+        correction,
+        insurance,
+      })
+      setCalcError(null)
+      return result
+    } catch (err: any) {
+      setCalcError(err?.message || 'Erro inesperado ao calcular o financiamento.')
+      return []
+    }
   }, [loanAmount, startDate, system, interestRate, rateType, installments, plans, correction, insurance])
 
   // Summary
@@ -541,6 +551,15 @@ export default function Amortizacao() {
             <p className="am-empty-text">Nenhum plano de amortizacao extra adicionado.</p>
           )}
         </section>
+
+        {/* ─── Calculation Error ─── */}
+        {calcError && (
+          <div style={{ padding: '16px 0' }}>
+            <p style={{ color: '#ef4444', fontSize: '14px', textAlign: 'center', margin: 0 }}>
+              {calcError}
+            </p>
+          </div>
+        )}
 
         {/* ─── Dashboard ─── */}
         {summary && (
