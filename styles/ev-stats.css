@@ -763,3 +763,59 @@
   animation: fadeInUp 0.6s ease backwards;
   animation-delay: 0.15s;
 }
+
+/* ─── Fallback banner ─── */
+.ev-fallback-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.dark .ev-fallback-banner {
+  background: #451a03;
+  color: #fde68a;
+  border-color: #92400e;
+}
+
+.ev-fallback-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.ev-fallback-text {
+  flex: 1;
+  font-weight: 500;
+}
+
+.ev-fallback-retry {
+  background: #f59e0b;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.ev-fallback-retry:hover {
+  background: #d97706;
+}
+
+.dark .ev-fallback-retry {
+  background: #b45309;
+}
+
+.dark .ev-fallback-retry:hover {
+  background: #92400e;
+}
