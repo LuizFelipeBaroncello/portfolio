@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import Head from 'next/head'
 import { useTheme } from '../lib/use-theme'
 import ErrorMessage from '../components/ErrorMessage'
+import EV_STATS_FALLBACK from '../lib/ev-stats-fallback'
 
 interface Category {
   key: string
@@ -403,6 +404,7 @@ export default function EVStats() {
   const [data, setData] = useState<DataRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [usingFallback, setUsingFallback] = useState(false)
   const [theme, toggleTheme] = useTheme()
   const [visibleCats, setVisibleCats] = useState(() => new Set(VISIBLE_CATEGORIES.map((c) => c.key)))
   const [period, setPeriod] = useState('mensal')
@@ -443,6 +445,7 @@ export default function EVStats() {
   const fetchData = useCallback(() => {
     setLoading(true)
     setError(null)
+    setUsingFallback(false)
     fetch('/api/ev-stats')
       .then((r) => {
         if (!r.ok) throw new Error('Erro ao carregar dados')
@@ -460,6 +463,15 @@ export default function EVStats() {
       })
       .catch((e) => {
         setError(e.message)
+        // Load fallback illustrative data so the dashboard remains usable
+        const months = EV_STATS_FALLBACK.map((row) => row.mes)
+        const mileageValues = interpolateMileage(months)
+        const merged = EV_STATS_FALLBACK.map((row, i) => ({
+          ...row,
+          quilometragem: mileageValues[i] || 0,
+        }))
+        setData(merged)
+        setUsingFallback(true)
         setLoading(false)
       })
   }, [])
@@ -584,12 +596,23 @@ export default function EVStats() {
           </div>
         )}
 
-        {error && (
+        {error && !usingFallback && (
           <ErrorMessage message={error} onRetry={fetchData} />
         )}
 
-        {!loading && !error && (
+        {!loading && (usingFallback || !error) && (
           <>
+            {/* Fallback banner */}
+            {usingFallback && (
+              <div className="ev-fallback-banner">
+                <span className="ev-fallback-icon">⚠</span>
+                <span className="ev-fallback-text">Dados ilustrativos — API indisponível</span>
+                <button className="ev-fallback-retry" onClick={fetchData}>
+                  Tentar novamente
+                </button>
+              </div>
+            )}
+
             {/* Period Selector */}
             <div className="ev-period-bar-wrapper">
               <div className="ev-period-bar">
