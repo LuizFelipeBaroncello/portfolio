@@ -799,6 +799,26 @@
   color: var(--text-muted);
 }
 
+/* ─── Input Validation ─── */
+.input-error {
+  border-color: #ef4444 !important;
+  outline-color: #ef4444;
+}
+
+.field-error-msg {
+  display: block;
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 4px;
+}
+
+.field-warn-msg {
+  display: block;
+  font-size: 12px;
+  color: #f59e0b;
+  margin-top: 4px;
+}
+
 @media (max-width: 768px) {
   .am-compare-grid {
     grid-template-columns: 1fr !important;

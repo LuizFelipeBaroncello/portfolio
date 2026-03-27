@@ -14,6 +14,12 @@ import {
   planDescription,
 } from '../lib/amortizacao'
 import {
+  validateLoanAmount,
+  validateRate,
+  validateTerm,
+  validateExtraPayment,
+} from '../lib/amortizacao/validation'
+import {
   AmortCompositionChart,
   BalanceChart,
   AccumulatedCostChart,
@@ -82,6 +88,26 @@ export default function Amortizacao() {
   // Calculation error
   const [calcError, setCalcError] = useState<string | null>(null)
 
+  // Field validation errors/warnings
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({})
+  const [warnings, setWarnings] = useState<Record<string, string | undefined>>({})
+
+  const setFieldValidation = useCallback((field: string, value: number, validator: (v: number) => { valid: boolean; message?: string }, warnOnly = false) => {
+    const result = validator(value)
+    if (!result.valid) {
+      setErrors(prev => ({ ...prev, [field]: result.message }))
+      setWarnings(prev => ({ ...prev, [field]: undefined }))
+    } else if (result.message) {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+      setWarnings(prev => ({ ...prev, [field]: result.message }))
+    } else {
+      setErrors(prev => ({ ...prev, [field]: undefined }))
+      setWarnings(prev => ({ ...prev, [field]: undefined }))
+    }
+  }, [])
+
+  const hasErrors = Object.values(errors).some(Boolean)
+
   // Compare mode
   const [compareMode, setCompareMode] = useState(false)
   const [strategies, setStrategies] = useState([
@@ -133,6 +159,7 @@ export default function Amortizacao() {
   // Generate schedule
   const schedule = useMemo(() => {
     if (!loanAmount || !installments || !interestRate) return []
+    if (hasErrors) return []
     try {
       const result = generateSchedule({
         loanAmount,
@@ -184,7 +211,7 @@ export default function Amortizacao() {
   // Compare mode: generate schedules and summaries for each strategy
   const baseParams = { loanAmount, startDate, system, interestRate, rateType, installments, correction, insurance }
   const compareData = useMemo(() => {
-    if (!compareMode || !loanAmount || !installments || !interestRate) return null
+    if (!compareMode || !loanAmount || !installments || !interestRate || hasErrors) return null
     const baseSchedule = generateSchedule({ ...baseParams, plans: [] })
     const baseSummary = calcSummary(baseSchedule, loanAmount)
     const investMonthlyRate = investment.enabled ? toMonthlyRate(investment.rate, investment.rateType) : 0
@@ -293,13 +320,18 @@ export default function Amortizacao() {
                 <span className="am-input-prefix">R$</span>
                 <input
                   type="number"
-                  className="am-input am-input-with-prefix"
+                  className={`am-input am-input-with-prefix${errors.loanAmount ? ' input-error' : ''}`}
                   value={loanAmount}
-                  onChange={e => setLoanAmount(Number(e.target.value))}
+                  onChange={e => {
+                    const v = Number(e.target.value)
+                    setLoanAmount(v)
+                    setFieldValidation('loanAmount', v, validateLoanAmount)
+                  }}
                   min={0}
                   step={1000}
                 />
               </div>
+              {errors.loanAmount && <span className="field-error-msg">{errors.loanAmount}</span>}
             </div>
             <div className="am-field">
               <label className="am-label">Data de Inicio</label>
@@ -322,9 +354,13 @@ export default function Amortizacao() {
               <div className="am-input-row">
                 <input
                   type="number"
-                  className="am-input"
+                  className={`am-input${errors.interestRate ? ' input-error' : ''}`}
                   value={interestRate}
-                  onChange={e => setInterestRate(Number(e.target.value))}
+                  onChange={e => {
+                    const v = Number(e.target.value)
+                    setInterestRate(v)
+                    setFieldValidation('interestRate', v, validateRate)
+                  }}
                   min={0}
                   step={0.01}
                 />
@@ -333,17 +369,24 @@ export default function Amortizacao() {
                   <button className={`am-toggle-btn${rateType === 'mensal' ? ' active' : ''}`} onClick={() => setRateType('mensal')}>a.m.</button>
                 </div>
               </div>
+              {errors.interestRate && <span className="field-error-msg">{errors.interestRate}</span>}
+              {!errors.interestRate && warnings.interestRate && <span className="field-warn-msg">{warnings.interestRate}</span>}
             </div>
             <div className="am-field">
               <label className="am-label">Quantidade de Parcelas</label>
               <input
                 type="number"
-                className="am-input"
+                className={`am-input${errors.installments ? ' input-error' : ''}`}
                 value={installments}
-                onChange={e => setInstallments(Number(e.target.value))}
+                onChange={e => {
+                  const v = Number(e.target.value)
+                  setInstallments(v)
+                  setFieldValidation('installments', v, validateTerm)
+                }}
                 min={1}
                 max={600}
               />
+              {errors.installments && <span className="field-error-msg">{errors.installments}</span>}
             </div>
             <div className="am-field">
               <label className="am-label">Taxa Mensal Efetiva</label>
@@ -468,12 +511,17 @@ export default function Amortizacao() {
                   <label className="am-label-sm">Valor (R$)</label>
                   <input
                     type="number"
-                    className="am-input am-input-sm"
+                    className={`am-input am-input-sm${errors.planAmount ? ' input-error' : ''}`}
                     value={newPlan.amount}
-                    onChange={e => setNewPlan(p => ({ ...p, amount: Number(e.target.value) }))}
+                    onChange={e => {
+                      const v = Number(e.target.value)
+                      setNewPlan(p => ({ ...p, amount: v }))
+                      setFieldValidation('planAmount', v, validateExtraPayment)
+                    }}
                     min={0}
                     step={100}
                   />
+                  {errors.planAmount && <span className="field-error-msg">{errors.planAmount}</span>}
                 </div>
                 {(newPlan.type === 'unico' || newPlan.type === 'fgts_parcela' || newPlan.type === 'fgts_saldo') && (
                   <div className="am-field">
