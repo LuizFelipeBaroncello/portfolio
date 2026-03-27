@@ -355,26 +355,6 @@ a {
   font-variation-settings: 'wght' 400;
 }
 
-.card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.card-tag-pill {
-  font-size: 11px;
-  padding: 3px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  color: var(--text-muted);
-  font-variation-settings: 'wght' 450;
-}
-
-[data-theme='light'] .card-tag-pill {
-  background: rgba(0, 0, 0, 0.05);
-}
-
 /* ===== Corner Link Button ===== */
 .corner-link {
   position: absolute;
