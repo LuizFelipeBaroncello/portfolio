@@ -79,13 +79,6 @@
   to { transform: rotate(360deg); }
 }
 
-.ev-error {
-  text-align: center;
-  padding: 60px 0;
-  color: #ef4444;
-  font-size: 14px;
-}
-
 /* ===== Period Selector ===== */
 .ev-period-bar-wrapper {
   display: flex;
@@ -625,38 +618,6 @@
 .ev-td-total {
   font-variation-settings: 'wght' 700;
   color: var(--text-primary);
-}
-
-/* ===== Mileage Section ===== */
-.ev-mileage-summary {
-  margin-bottom: 24px;
-}
-
-.ev-mileage-highlight {
-  background: linear-gradient(
-    135deg,
-    var(--bg-card) 0%,
-    color-mix(in srgb, var(--accent-cyan) 6%, var(--bg-card)) 100%
-  );
-}
-
-.ev-section-subtitle {
-  font-size: 14px;
-  font-variation-settings: 'wght' 600;
-  letter-spacing: -0.01em;
-  margin: 24px 0 12px;
-  color: var(--text-secondary);
-}
-
-.ev-mileage-known-badge {
-  display: inline-block;
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--accent-cyan) 15%, transparent);
-  color: var(--accent-cyan);
-  margin-left: 6px;
-  font-variation-settings: 'wght' 600;
 }
 
 /* ===== Responsive ===== */

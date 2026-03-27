@@ -174,16 +174,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.sm-info-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.06);
-  margin: 8px 0;
-}
-
-[data-theme='light'] .sm-info-divider {
-  background: rgba(0, 0, 0, 0.06);
-}
-
 .sm-sun-indicator {
   display: inline-block;
   width: 8px;
@@ -485,20 +475,6 @@
   cursor: grab;
 }
 
-.sm-slider-labels {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 4px;
-  padding: 0 2px;
-}
-
-.sm-slider-label {
-  font-size: 10px;
-  color: var(--text-muted);
-  font-variation-settings: 'wght' 450;
-  font-variant-numeric: tabular-nums;
-}
-
 /* ===== Loading overlay ===== */
 .sm-loading {
   position: absolute;
@@ -530,50 +506,6 @@
   font-variant-numeric: tabular-nums;
   margin-left: auto;
   white-space: nowrap;
-}
-
-/* ===== Token prompt ===== */
-.sm-token-prompt {
-  position: absolute;
-  inset: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-primary);
-  padding: 24px;
-  text-align: center;
-}
-
-.sm-token-prompt h2 {
-  font-size: 22px;
-  font-variation-settings: 'wght' 700;
-  margin-bottom: 12px;
-}
-
-.sm-token-prompt p {
-  font-size: 14px;
-  color: var(--text-secondary);
-  max-width: 420px;
-  line-height: 1.6;
-  margin-bottom: 20px;
-}
-
-.sm-token-prompt code {
-  display: inline-block;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--accent-orange);
-  font-family: monospace;
-}
-
-[data-theme='light'] .sm-token-prompt code {
-  background: rgba(0, 0, 0, 0.04);
-  border-color: rgba(0, 0, 0, 0.1);
 }
 
 /* ===== Solar Compass Overlay (on map) ===== */
