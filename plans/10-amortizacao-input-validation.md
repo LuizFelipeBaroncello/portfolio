@@ -2,24 +2,25 @@
 
 **Prioridade:** 10 (robustez)
 **Categoria:** Projeto - Amortização
+**Status:** Concluído
 
 ## Tarefas
 
 ### Identificar campos
-- [ ] Listar todos os inputs numéricos da página (valor financiado, taxa de juros, prazo, valor FGTS, etc.)
+- [x] Listar todos os inputs numéricos da página (valor financiado, taxa de juros, prazo, valor FGTS, etc.)
 
 ### Implementar validações
-- [ ] Valor financiado: não permitir zero, negativo ou não-numérico
-- [ ] Taxa de juros: não permitir negativo; alertar se valor parecer fora do comum (>30% a.a.)
-- [ ] Prazo em meses: não permitir zero, negativo ou fracionário
-- [ ] Valor de entrada/FGTS: não permitir negativo; não permitir maior que valor financiado
-- [ ] Pagamentos extras: não permitir negativo
+- [x] Valor financiado: não permitir zero, negativo ou não-numérico
+- [x] Taxa de juros: não permitir negativo; alertar se valor parecer fora do comum (>30% a.a.)
+- [x] Prazo em meses: não permitir zero, negativo ou fracionário
+- [x] Valor de entrada/FGTS: não permitir negativo; não permitir maior que valor financiado
+- [x] Pagamentos extras: não permitir negativo
 
 ### Feedback visual
-- [ ] Destacar campo com borda vermelha quando inválido
-- [ ] Exibir mensagem de erro inline abaixo do campo
-- [ ] Desabilitar botão de calcular enquanto houver erros
+- [x] Destacar campo com borda vermelha quando inválido
+- [x] Exibir mensagem de erro inline abaixo do campo
+- [x] Desabilitar botão de calcular enquanto houver erros
 
 ### Validação
-- [ ] Testar com valores extremos (0, negativos, muito grandes, texto)
-- [ ] Rodar `npm run build`
+- [x] Testar com valores extremos (0, negativos, muito grandes, texto)
+- [x] Rodar `npm run build`
