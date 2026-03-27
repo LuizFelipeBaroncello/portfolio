@@ -8,47 +8,27 @@ import {
   minutesToDate,
   formatTimeFromMinutes,
   formatTime,
-  mapAltitudeToIntensity,
-  mapAltitudeToColor,
   SunPosition,
 } from '../lib/sun-calc-utils'
+import {
+  DEFAULT_LAT,
+  DEFAULT_LNG,
+  DEFAULT_ZOOM,
+  SPEEDS,
+  BUILDING_COLORS,
+  getMapStyle,
+  formatDateISO,
+  getSkyGradient,
+  polygonCentroid,
+  computeAllShadows,
+  buildingsToGeoJSON,
+  addMapLayers,
+  updateSunLighting,
+  updateDrawingPreview,
+  CustomBuilding,
+} from '../lib/sun-map-config'
 import InteriorView from '../components/sun-map/InteriorView'
-
-const DEFAULT_LAT = -27.5934
-const DEFAULT_LNG = -48.5828
-const DEFAULT_ZOOM = 16
-
-const SPEEDS = [
-  { label: '1x', value: 1 },
-  { label: '5x', value: 5 },
-  { label: '30x', value: 30 },
-  { label: '60x', value: 60 },
-  { label: '120x', value: 120 },
-  { label: '240x', value: 240 },
-]
-
-const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/positron'
-const STYLE_DARK = 'https://tiles.openfreemap.org/styles/dark'
-
-const BUILDING_COLORS = [
-  { label: 'Cinza', value: '#8899aa' },
-  { label: 'Azul', value: '#4a9eff' },
-  { label: 'Verde', value: '#34d399' },
-  { label: 'Laranja', value: '#fb923c' },
-  { label: 'Roxo', value: '#a78bfa' },
-  { label: 'Rosa', value: '#f472b6' },
-]
-
-function getMapStyle(theme) {
-  return theme === 'light' ? STYLE_LIGHT : STYLE_DARK
-}
-
-function formatDateISO(date) {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
+import SunMapControls from '../components/sun-map/SunMapControls'
 
 function loadCustomBuildings() {
   try {
@@ -61,397 +41,6 @@ function loadCustomBuildings() {
 
 function saveCustomBuildings(buildings) {
   localStorage.setItem('sun-map-buildings', JSON.stringify(buildings))
-}
-
-function getSkyGradient(altitude) {
-  if (altitude < -12) return 'linear-gradient(to bottom, #0a0a1a 0%, #111122 100%)'
-  if (altitude < -6) return 'linear-gradient(to bottom, #0f1033 0%, #1a1a3e 100%)'
-  if (altitude < 0) return 'linear-gradient(to bottom, #1a1a3e 0%, #c45c2a 60%, #e8a04a 100%)'
-  if (altitude < 10) return 'linear-gradient(to bottom, #3a6fb5 0%, #e8975a 50%, #f0c87a 100%)'
-  if (altitude < 30) return 'linear-gradient(to bottom, #4a90d9 0%, #6db3f0 50%, #a8d4f5 100%)'
-  return 'linear-gradient(to bottom, #3a7bd5 0%, #6db3f0 100%)'
-}
-
-/* ===== Convex Hull (Andrew's monotone chain) ===== */
-function convexHull(points) {
-  const pts = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1])
-  if (pts.length <= 2) return pts
-
-  const cross = (O, A, B) =>
-    (A[0] - O[0]) * (B[1] - O[1]) - (A[1] - O[1]) * (B[0] - O[0])
-
-  const lower = []
-  for (const p of pts) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0)
-      lower.pop()
-    lower.push(p)
-  }
-
-  const upper = []
-  for (let i = pts.length - 1; i >= 0; i--) {
-    const p = pts[i]
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0)
-      upper.pop()
-    upper.push(p)
-  }
-
-  return [...lower.slice(0, -1), ...upper.slice(0, -1)]
-}
-
-/* ===== Shadow polygon from building footprint ===== */
-function computeShadowPolygon(coords, height, sunPos, centerLat) {
-  if (sunPos.altitude <= 0.5 || !coords || coords.length < 3) return null
-
-  const altRad = (sunPos.altitude * Math.PI) / 180
-  const azRad = (sunPos.azimuth * Math.PI) / 180
-  const shadowDir = azRad + Math.PI
-  const shadowLen = height / Math.tan(altRad)
-
-  // Cap shadow length to avoid absurdly long shadows at sunset
-  const cappedLen = Math.min(shadowLen, 500)
-  const cosLat = Math.cos((centerLat * Math.PI) / 180)
-  const dLat = (cappedLen * Math.cos(shadowDir)) / 111320
-  const dLng = (cappedLen * Math.sin(shadowDir)) / (111320 * cosLat)
-
-  // Original vertices (remove closing duplicate if present)
-  let verts = coords
-  if (
-    verts.length > 1 &&
-    verts[0][0] === verts[verts.length - 1][0] &&
-    verts[0][1] === verts[verts.length - 1][1]
-  ) {
-    verts = verts.slice(0, -1)
-  }
-
-  const projected = verts.map((c) => [c[0] + dLng, c[1] + dLat])
-  const allPoints = [...verts, ...projected]
-  const hull = convexHull(allPoints)
-  if (hull.length < 3) return null
-  const closed = [...hull, hull[0]]
-
-  const opacity = Math.min(0.35, 0.08 + (sunPos.altitude / 90) * 0.27)
-
-  return {
-    type: 'Feature',
-    properties: { opacity },
-    geometry: { type: 'Polygon', coordinates: [closed] },
-  }
-}
-
-/* ===== Compute shadows for all visible buildings ===== */
-function computeAllShadows(map, sunPos, customBuildings, centerLat) {
-  const features = []
-
-  if (sunPos.altitude <= 0.5) {
-    return { type: 'FeatureCollection', features }
-  }
-
-  // OSM buildings from rendered features
-  if (map.getLayer('3d-buildings')) {
-    try {
-      const osmFeatures = map.queryRenderedFeatures({ layers: ['3d-buildings'] })
-      const limit = 250
-      const subset = osmFeatures.slice(0, limit)
-      for (const f of subset) {
-        if (!f.geometry) continue
-        const rings =
-          f.geometry.type === 'Polygon'
-            ? [f.geometry.coordinates[0]]
-            : f.geometry.type === 'MultiPolygon'
-              ? f.geometry.coordinates.map((p) => p[0])
-              : []
-        const height = f.properties.render_height || f.properties.height || 10
-        for (const ring of rings) {
-          const shadow = computeShadowPolygon(ring, height, sunPos, centerLat)
-          if (shadow) features.push(shadow)
-        }
-      }
-    } catch {
-      // queryRenderedFeatures can fail if style not loaded
-    }
-  }
-
-  // Custom buildings
-  for (const b of customBuildings) {
-    const shadow = computeShadowPolygon(b.coordinates, b.height, sunPos, centerLat)
-    if (shadow) features.push(shadow)
-  }
-
-  return { type: 'FeatureCollection', features }
-}
-
-function buildingsToGeoJSON(buildings) {
-  return {
-    type: 'FeatureCollection',
-    features: buildings.map((b, i) => ({
-      type: 'Feature',
-      id: i,
-      properties: { height: b.height, color: b.color || '#8899aa', index: i },
-      geometry: {
-        type: 'Polygon',
-        coordinates: [b.coordinates],
-      },
-    })),
-  }
-}
-
-function addMapLayers(map, sunPos, customBuildings) {
-  // Remove the flat building layer
-  if (map.getLayer('building')) {
-    map.removeLayer('building')
-  }
-
-  const layers = map.getStyle().layers || []
-  let labelLayerId
-  for (const layer of layers) {
-    if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
-      labelLayerId = layer.id
-      break
-    }
-  }
-
-  // 3D buildings (add first so shadow layer can reference it)
-  if (!map.getLayer('3d-buildings')) {
-    map.addLayer(
-      {
-        id: '3d-buildings',
-        source: 'openmaptiles',
-        'source-layer': 'building',
-        type: 'fill-extrusion',
-        minzoom: 13,
-        paint: {
-          'fill-extrusion-color': '#aaaaaa',
-          'fill-extrusion-height': [
-            'coalesce',
-            ['get', 'render_height'],
-            ['get', 'height'],
-            10,
-          ],
-          'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
-          'fill-extrusion-opacity': 0.75,
-        },
-      },
-      labelLayerId
-    )
-  }
-
-  // Ground shadow layer — uses fill-extrusion with tiny height so it renders
-  // in the 3D compositing pass (flat fill layers are hidden under extrusions)
-  if (!map.getSource('ground-shadows')) {
-    map.addSource('ground-shadows', {
-      type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] },
-    })
-  }
-
-  if (!map.getLayer('ground-shadows-fill')) {
-    map.addLayer(
-      {
-        id: 'ground-shadows-fill',
-        type: 'fill-extrusion',
-        source: 'ground-shadows',
-        paint: {
-          'fill-extrusion-color': '#1a1a2e',
-          'fill-extrusion-height': 0.5,
-          'fill-extrusion-base': 0,
-          'fill-extrusion-opacity': 0.45,
-        },
-      },
-      '3d-buildings'
-    )
-  }
-
-  // Custom buildings source + layer
-  if (!map.getSource('custom-buildings')) {
-    map.addSource('custom-buildings', {
-      type: 'geojson',
-      data: buildingsToGeoJSON(customBuildings),
-    })
-  }
-
-  if (!map.getLayer('custom-buildings-3d')) {
-    map.addLayer({
-      id: 'custom-buildings-3d',
-      type: 'fill-extrusion',
-      source: 'custom-buildings',
-      paint: {
-        'fill-extrusion-color': ['get', 'color'],
-        'fill-extrusion-height': ['get', 'height'],
-        'fill-extrusion-base': 0,
-        'fill-extrusion-opacity': 0.8,
-      },
-    })
-  }
-
-  // Selected building highlight
-  if (!map.getSource('selected-building')) {
-    map.addSource('selected-building', {
-      type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] },
-    })
-  }
-
-  if (!map.getLayer('selected-building-outline')) {
-    map.addLayer({
-      id: 'selected-building-outline',
-      type: 'line',
-      source: 'selected-building',
-      paint: {
-        'line-color': '#fb923c',
-        'line-width': 3,
-        'line-dasharray': [2, 1],
-      },
-    })
-  }
-
-  // Drawing polygon preview
-  if (!map.getSource('drawing-preview')) {
-    map.addSource('drawing-preview', {
-      type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] },
-    })
-  }
-
-  if (!map.getLayer('drawing-preview-fill')) {
-    map.addLayer({
-      id: 'drawing-preview-fill',
-      type: 'fill',
-      source: 'drawing-preview',
-      paint: {
-        'fill-color': '#fb923c',
-        'fill-opacity': 0.3,
-      },
-    })
-  }
-
-  if (!map.getLayer('drawing-preview-line')) {
-    map.addLayer({
-      id: 'drawing-preview-line',
-      type: 'line',
-      source: 'drawing-preview',
-      paint: {
-        'line-color': '#fb923c',
-        'line-width': 2,
-        'line-dasharray': [2, 2],
-      },
-    })
-  }
-
-  // Drawing vertices
-  if (!map.getSource('drawing-points')) {
-    map.addSource('drawing-points', {
-      type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] },
-    })
-  }
-
-  if (!map.getLayer('drawing-points-layer')) {
-    map.addLayer({
-      id: 'drawing-points-layer',
-      type: 'circle',
-      source: 'drawing-points',
-      paint: {
-        'circle-radius': 5,
-        'circle-color': '#fb923c',
-        'circle-stroke-width': 2,
-        'circle-stroke-color': '#ffffff',
-      },
-    })
-  }
-}
-
-function updateSunLighting(map, sunPos) {
-  if (!map || !map.getStyle()) return
-
-  const { azimuth, altitude } = sunPos
-  const intensity = mapAltitudeToIntensity(altitude)
-  const color = mapAltitudeToColor(altitude)
-
-  map.setLight({
-    anchor: 'map',
-    position: [1.5, azimuth, Math.max(0, altitude)],
-    color: color,
-    intensity: intensity,
-  })
-
-  let buildingColor, buildingOpacity
-  if (altitude < -6) {
-    buildingColor = '#333344'
-    buildingOpacity = 0.6
-  } else if (altitude < 0) {
-    buildingColor = '#665544'
-    buildingOpacity = 0.65
-  } else if (altitude < 10) {
-    buildingColor = '#cc9966'
-    buildingOpacity = 0.75
-  } else {
-    buildingColor = '#aaaaaa'
-    buildingOpacity = 0.75
-  }
-
-  if (map.getLayer('3d-buildings')) {
-    map.setPaintProperty('3d-buildings', 'fill-extrusion-color', buildingColor)
-    map.setPaintProperty('3d-buildings', 'fill-extrusion-opacity', buildingOpacity)
-  }
-
-  if (map.getLayer('custom-buildings-3d')) {
-    map.setPaintProperty('custom-buildings-3d', 'fill-extrusion-opacity', buildingOpacity)
-  }
-}
-
-function updateDrawingPreview(map, points) {
-  if (!map) return
-
-  const pointFeatures = points.map((p) => ({
-    type: 'Feature',
-    geometry: { type: 'Point', coordinates: p },
-  }))
-  const pointsSrc = map.getSource('drawing-points')
-  if (pointsSrc) {
-    pointsSrc.setData({ type: 'FeatureCollection', features: pointFeatures })
-  }
-
-  const previewSrc = map.getSource('drawing-preview')
-  if (previewSrc) {
-    if (points.length >= 3) {
-      const closed = [...points, points[0]]
-      previewSrc.setData({
-        type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            geometry: { type: 'Polygon', coordinates: [closed] },
-          },
-        ],
-      })
-    } else if (points.length >= 2) {
-      previewSrc.setData({
-        type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            geometry: { type: 'LineString', coordinates: points },
-          },
-        ],
-      })
-    } else {
-      previewSrc.setData({ type: 'FeatureCollection', features: [] })
-    }
-  }
-}
-
-/* ===== Centroid of a polygon ring ===== */
-function polygonCentroid(coords) {
-  let sumLng = 0
-  let sumLat = 0
-  const verts = coords[coords.length - 1][0] === coords[0][0] && coords[coords.length - 1][1] === coords[0][1]
-    ? coords.slice(0, -1)
-    : coords
-  for (const c of verts) {
-    sumLng += c[0]
-    sumLat += c[1]
-  }
-  return [sumLng / verts.length, sumLat / verts.length]
 }
 
 interface SolarCompassProps {
@@ -1462,240 +1051,45 @@ export default function SunMap() {
       )}
 
       {/* Controls */}
-      <div className="sm-controls">
-        {/* Mode selector */}
-        <div className="sm-mode-selector">
-          {[
-            { key: 'single-day', label: 'Dia' },
-            { key: 'date-range', label: 'Intervalo' },
-            { key: 'fixed-hour', label: 'Ano' },
-          ].map((m) => (
-            <button
-              key={m.key}
-              className={`sm-mode-btn ${playMode === m.key ? 'active' : ''}`}
-              onClick={() => {
-                setPlayMode(m.key)
-                setIsPlaying(false)
-                if (m.key === 'date-range') {
-                  setCurrentPlayDate(new Date(startDate))
-                  currentPlayDateRef.current = new Date(startDate)
-                } else if (m.key === 'fixed-hour') {
-                  setYearProgress(0)
-                  yearProgressRef.current = 0
-                }
-              }}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="sm-controls-top">
-          <form className="sm-search-wrapper" onSubmit={handleSearch}>
-            <span className="sm-search-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              className="sm-search-input"
-              placeholder="Buscar local..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </form>
-
-          {/* Date inputs - mode aware */}
-          {playMode === 'date-range' ? (
-            <div className="sm-date-range-inputs">
-              <input
-                type="date"
-                className="sm-date-input sm-date-small"
-                value={formatDateISO(startDate)}
-                onChange={(e) => {
-                  const d = new Date(e.target.value + 'T12:00:00')
-                  if (!isNaN(d.getTime())) {
-                    setStartDate(d)
-                    setCurrentPlayDate(new Date(d))
-                    currentPlayDateRef.current = new Date(d)
-                  }
-                }}
-              />
-              <span className="sm-date-range-sep">&rarr;</span>
-              <input
-                type="date"
-                className="sm-date-input sm-date-small"
-                value={formatDateISO(endDate)}
-                onChange={(e) => {
-                  const d = new Date(e.target.value + 'T12:00:00')
-                  if (!isNaN(d.getTime())) setEndDate(d)
-                }}
-              />
-            </div>
-          ) : playMode === 'fixed-hour' ? (
-            <div className="sm-fixed-hour-inputs">
-              <input
-                type="number"
-                className="sm-year-input"
-                value={selectedDate.getFullYear()}
-                min="1900"
-                max="2100"
-                onChange={(e) => {
-                  const y = parseInt(e.target.value)
-                  if (!isNaN(y) && y >= 1900 && y <= 2100) {
-                    const d = new Date(selectedDate)
-                    d.setFullYear(y)
-                    setSelectedDate(d)
-                  }
-                }}
-              />
-              <input
-                type="time"
-                className="sm-time-input"
-                value={`${String(fixedHour).padStart(2, '0')}:${String(fixedMinute).padStart(2, '0')}`}
-                onChange={(e) => {
-                  const [h, m] = e.target.value.split(':').map(Number)
-                  if (!isNaN(h)) setFixedHour(h)
-                  if (!isNaN(m)) setFixedMinute(m)
-                }}
-              />
-            </div>
-          ) : (
-            <input
-              type="date"
-              className="sm-date-input"
-              value={formatDateISO(selectedDate)}
-              onChange={handleDateChange}
-            />
-          )}
-
-          <button className="sm-speed-btn" onClick={cycleSpeed} title="Velocidade">
-            {playMode === 'fixed-hour'
-              ? `${speed}d/s`
-              : (SPEEDS.find((s) => s.value === speed)?.label || '5x')}
-          </button>
-
-          <button
-            className={`sm-skip-night-btn ${skipNight ? 'active' : ''}`}
-            onClick={() => setSkipNight((v) => !v)}
-            title={skipNight ? 'Pular noite: ligado' : 'Pular noite: desligado'}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" />
-            </svg>
-          </button>
-
-          <span className="sm-coords">
-            {lat.toFixed(4)}, {lng.toFixed(4)}
-          </span>
-        </div>
-
-        {/* Date indicator for date-range mode */}
-        {playMode === 'date-range' && isPlaying && (
-          <div className="sm-date-indicator">
-            {effectiveDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
-            {startDate && endDate && (() => {
-              const totalDays = Math.round((endDate.getTime() - startDate.getTime()) / 86400000)
-              const currentDay = Math.round((currentPlayDate.getTime() - startDate.getTime()) / 86400000) + 1
-              return ` (Dia ${currentDay} de ${totalDays})`
-            })()}
-          </div>
-        )}
-
-        {/* Month indicator for fixed-hour mode */}
-        {playMode === 'fixed-hour' && (
-          <div className="sm-date-indicator">
-            {effectiveDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
-          </div>
-        )}
-
-        <div className="sm-slider-row">
-          <button
-            className={`sm-play-btn ${isPlaying ? 'playing' : ''}`}
-            onClick={() => {
-              if (!isPlaying && playMode === 'date-range') {
-                setCurrentPlayDate(new Date(startDate))
-                currentPlayDateRef.current = new Date(startDate)
-                setCurrentMinutes(0)
-              }
-              if (!isPlaying && playMode === 'fixed-hour') {
-                setYearProgress(0)
-                yearProgressRef.current = 0
-              }
-              setIsPlaying(!isPlaying)
-            }}
-            title={isPlaying ? 'Pausar' : 'Reproduzir'}
-          >
-            {isPlaying ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="4" width="4" height="16" rx="1" />
-                <rect x="14" y="4" width="4" height="16" rx="1" />
-              </svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 4l14 8-14 8V4z" />
-              </svg>
-            )}
-          </button>
-
-          <span className="sm-time-display">
-            {playMode === 'fixed-hour'
-              ? `${String(fixedHour).padStart(2, '0')}:${String(fixedMinute).padStart(2, '0')}`
-              : formatTimeFromMinutes(Math.floor(currentMinutes))}
-          </span>
-
-          {playMode === 'fixed-hour' ? (
-            <div className="sm-slider-container">
-              <div className="sm-slider-track">
-                <div
-                  className="sm-slider-fill"
-                  style={{ width: `${(yearProgress / 365) * 100}%` }}
-                />
-              </div>
-              <input
-                type="range"
-                className="sm-time-slider"
-                min="0"
-                max="365"
-                step="0.1"
-                value={yearProgress}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value)
-                  setYearProgress(v)
-                  yearProgressRef.current = v
-                }}
-              />
-            </div>
-          ) : (
-            <div className="sm-slider-container">
-              <div className="sm-slider-track">
-                <div
-                  className="sm-slider-daylight"
-                  style={{
-                    left: `${daylightLeft}%`,
-                    width: `${daylightWidth}%`,
-                  }}
-                />
-                <div
-                  className="sm-slider-fill"
-                  style={{ width: `${sliderPercent}%` }}
-                />
-              </div>
-              <input
-                type="range"
-                className="sm-time-slider"
-                min="0"
-                max="1439"
-                step="1"
-                value={Math.floor(currentMinutes)}
-                onChange={handleSliderChange}
-              />
-            </div>
-          )}
-        </div>
-      </div>
+      <SunMapControls
+        playMode={playMode}
+        setPlayMode={setPlayMode}
+        isPlaying={isPlaying}
+        setIsPlaying={setIsPlaying}
+        speed={speed}
+        cycleSpeed={cycleSpeed}
+        skipNight={skipNight}
+        setSkipNight={setSkipNight}
+        currentMinutes={currentMinutes}
+        setCurrentMinutes={setCurrentMinutes}
+        yearProgress={yearProgress}
+        setYearProgress={setYearProgress}
+        yearProgressRef={yearProgressRef}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        startDate={startDate}
+        setStartDate={setStartDate}
+        endDate={endDate}
+        setEndDate={setEndDate}
+        currentPlayDate={currentPlayDate}
+        setCurrentPlayDate={setCurrentPlayDate}
+        currentPlayDateRef={currentPlayDateRef}
+        fixedHour={fixedHour}
+        setFixedHour={setFixedHour}
+        fixedMinute={fixedMinute}
+        setFixedMinute={setFixedMinute}
+        effectiveDate={effectiveDate}
+        lat={lat}
+        lng={lng}
+        daylightLeft={daylightLeft}
+        daylightWidth={daylightWidth}
+        sliderPercent={sliderPercent}
+        handleSearch={handleSearch}
+        handleDateChange={handleDateChange}
+        handleSliderChange={handleSliderChange}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+      />
 
       {/* Interior view modal */}
       {showInterior && interiorBuildingIdx !== null && customBuildings[interiorBuildingIdx] && (
