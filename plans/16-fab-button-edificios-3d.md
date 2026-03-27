@@ -1,0 +1,63 @@
+# 16 - Botao FAB (+) para abrir modal "EDIFICIOS 3D"
+
+**Prioridade:** 16 (feature)
+**Categoria:** Sun Map
+
+## Contexto
+
+Adicionar um botao flutuante (FAB - Floating Action Button) no estilo Material UI no canto inferior direito do mapa que abre o modal de edificios 3D.
+
+## Design
+
+- Botao redondo com icone "+" (ou icone de edificio/cubo 3D)
+- Posicionado no canto inferior direito do mapa, com margem de ~16-24px
+- Estilo Material Design: sombra elevada, cor de destaque, hover com leve elevacao
+- Deve respeitar o tema claro/escuro
+- Z-index acima do mapa mas abaixo de modais
+
+## Tarefas
+
+### Criar o botao FAB
+- [ ] Em `pages/sun-map.tsx`, adicionar um `<button>` com classe CSS tipo `sm-fab-interior` posicionado absolutamente dentro do container do mapa
+- [ ] O botao deve chamar uma funcao que abre o modal:
+  - Se ha um edificio selecionado (`selectedBuildingIdx !== null`), abrir o modal para esse edificio
+  - Se nao ha edificio selecionado mas existe pelo menos um edificio customizado, abrir para o primeiro (ou mostrar a lista)
+  - Se nao ha edificios customizados, mostrar feedback ao usuario (ex: tooltip "Desenhe um edificio primeiro")
+
+### Estilizar o FAB
+- [ ] Em `styles/sun-map.css`, adicionar estilos:
+  ```css
+  .sm-fab-interior {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    z-index: 10;
+    box-shadow: 0 3px 5px -1px rgba(0,0,0,0.2), 0 6px 10px 0 rgba(0,0,0,0.14), 0 1px 18px 0 rgba(0,0,0,0.12);
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .sm-fab-interior:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 5px -3px rgba(0,0,0,0.2), 0 8px 10px 1px rgba(0,0,0,0.14), 0 3px 14px 2px rgba(0,0,0,0.12);
+  }
+  ```
+- [ ] Adicionar cores para tema claro e escuro (usar variaveis CSS existentes ou definir novas)
+
+### Icone
+- [ ] Usar um SVG inline de "+" ou um icone de cubo/edificio 3D
+- [ ] O icone deve ser visivel em ambos os temas
+
+### Validacao
+- [ ] Testar com edificio selecionado — deve abrir modal do edificio correto
+- [ ] Testar sem edificio selecionado — comportamento adequado
+- [ ] Testar em ambos os temas
+- [ ] Verificar que nao obstrui controles existentes do mapa
+- [ ] Rodar `npm run build`
