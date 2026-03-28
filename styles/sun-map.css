@@ -1181,3 +1181,37 @@
     flex-wrap: wrap;
   }
 }
+
+/* ===== FAB Interior Button ===== */
+.sm-fab-interior {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  background: var(--accent-orange);
+  color: #fff;
+  box-shadow: 0 3px 5px -1px rgba(0, 0, 0, 0.2), 0 6px 10px 0 rgba(0, 0, 0, 0.14), 0 1px 18px 0 rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.sm-fab-interior:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2), 0 8px 10px 1px rgba(0, 0, 0, 0.14), 0 3px 14px 2px rgba(0, 0, 0, 0.12);
+}
+
+.sm-fab-interior:active {
+  transform: translateY(0);
+}
+
+[data-theme='light'] .sm-fab-interior {
+  background: var(--accent-orange);
+  color: #fff;
+}
