@@ -425,19 +425,54 @@ a {
 }
 
 /* ===== Bio Card ===== */
+.bio-card .bio-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
 .bio-card .bio-avatar {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 16px;
+  flex-shrink: 0;
+  border: 2px solid var(--border-card-hover);
+}
+
+.bio-card .bio-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bio-card .bio-name {
+  font-size: 20px;
+  font-variation-settings: 'wght' 800;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.bio-card .bio-role {
+  font-size: 13px;
+  color: var(--accent-blue);
+  font-variation-settings: 'wght' 500;
+  margin: 0;
+}
+
+.bio-card .bio-location {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
 }
 
 .bio-card .bio-intro {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.7;
-  flex: 1;
+  margin: 0 0 10px;
 }
 
 .bio-card .bio-intro strong {
@@ -445,11 +480,40 @@ a {
   font-variation-settings: 'wght' 700;
 }
 
-.bio-card .bio-name {
-  font-size: 22px;
-  font-variation-settings: 'wght' 800;
+.bio-card .bio-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0 16px;
+}
+
+.bio-card .bio-tag {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+  font-variation-settings: 'wght' 600;
+  letter-spacing: 0.02em;
+}
+
+.bio-card .bio-links {
+  display: flex;
+  gap: 12px;
+}
+
+.bio-card .bio-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-variation-settings: 'wght' 500;
+  transition: color var(--transition-fast);
+}
+
+.bio-card .bio-link:hover {
   color: var(--text-primary);
-  letter-spacing: -0.04em;
 }
 
 /* ===== Map Card ===== */
