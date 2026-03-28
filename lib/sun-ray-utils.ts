@@ -335,12 +335,12 @@ export function sunFacesWall(sunAzimuth: number, sunAltitude: number, wallNormal
   if (sunAltitude <= 0) return false
 
   const azRad = sunAzimuth * DEG2RAD
-  // Sun direction toward the building (reversed: where light comes from)
-  const sunTowardX = -Math.sin(azRad)
-  const sunTowardZ = -Math.cos(azRad)
+  // Vector from building toward the sun (azimuth 0=N, 90=E in our coordinate system where x=east, z=north)
+  const sunTowardX = Math.sin(azRad)
+  const sunTowardZ = Math.cos(azRad)
 
-  // Dot product of sun direction with wall outward normal
-  // If positive, sun faces the exterior of this wall
+  // If the dot product with the wall outward normal is positive,
+  // the sun is on the same side as the wall exterior → sun faces this wall
   const dot = sunTowardX * wallNormal.x + sunTowardZ * wallNormal.z
   return dot > 0
 }
