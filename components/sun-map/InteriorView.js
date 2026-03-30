@@ -3,7 +3,6 @@ import dynamic from 'next/dynamic'
 import { formatTimeFromMinutes } from '../../lib/sun-calc-utils'
 import {
   latlngToLocalMeters,
-  getWallSegments,
   computeWindowRect,
   sunFacesWall,
 } from '../../lib/sun-ray-utils'
@@ -65,17 +64,16 @@ export default function InteriorView({
   const [hideNearWalls, setHideNearWalls] = useState(true)
 
   // Wall modifications: { [wallIndex]: { lengthDelta, offsetDelta } }
-  const [wallMods, setWallMods] = useState({})
+  const [wallMods, setWallMods] = useState(() => building.wallMods || {})
 
   // Convert building to local meters
-  const { localCoords: baseLocalCoords, centroid } = latlngToLocalMeters(
+  const { localCoords: baseLocalCoords } = latlngToLocalMeters(
     building.coordinates,
     building.coordinates[0][1]
   )
 
-  // Apply wall modifications to get adjusted coordinates
-  const localCoords = applyWallMods(baseLocalCoords, wallMods)
-  const walls = getWallSegments(localCoords, building.height)
+  // Each wall is adjusted independently — no shared vertices between walls
+  const walls = applyWallMods(baseLocalCoords, wallMods, building.height)
 
   const addWindow = (wallIndex) => {
     setWindowConfigs((prev) => [...prev, { ...DEFAULT_WINDOW, wallIndex }])
@@ -101,9 +99,8 @@ export default function InteriorView({
   }, [])
 
   const handleSave = () => {
-    // Convert modified local coords back to latlng and update building
-    const newCoords = localMetersToLatlng(localCoords, centroid)
-    onUpdateBuilding({ ...building, windows: windowConfigs, coordinates: newCoords })
+    // Persist wallMods directly on the building; coordinates stay from original polygon
+    onUpdateBuilding({ ...building, windows: windowConfigs, wallMods })
   }
 
   const selectedWallWindows = windowConfigs
@@ -135,7 +132,7 @@ export default function InteriorView({
       <div className="sm-interior-body">
         <div className="sm-interior-canvas-wrap">
           <IsometricScene
-            localCoords={localCoords}
+            localCoords={baseLocalCoords}
             walls={walls}
             windowConfigs={windowConfigs}
             sunPos={sunPos}
@@ -520,60 +517,81 @@ export default function InteriorView({
 }
 
 /**
- * Apply wall modifications (length and offset adjustments) to base coordinates.
+ * Apply wall modifications independently per wall and return Wall segments.
+ * Each wall is treated as an isolated segment — adjacent walls are never moved.
+ * Gaps between walls are acceptable.
  */
-function applyWallMods(baseCoords, wallMods) {
-  if (!wallMods || Object.keys(wallMods).length === 0) return baseCoords
+function applyWallMods(baseCoords, wallMods, buildingHeight) {
+  const n = baseCoords.length
+  const orient = getPolygonOrient(baseCoords)
+  const walls = []
 
-  const coords = baseCoords.map((p) => ({ x: p.x, z: p.z }))
-  const n = coords.length
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n
 
-  for (const [wallIndexStr, mod] of Object.entries(wallMods)) {
-    const wi = parseInt(wallIndexStr)
-    const i = wi
-    const j = (wi + 1) % n
+    // Independent copies of this wall's endpoints (not shared with neighbours)
+    let sx = baseCoords[i].x, sz = baseCoords[i].z
+    let ex = baseCoords[j].x, ez = baseCoords[j].z
 
-    const dx = coords[j].x - coords[i].x
-    const dz = coords[j].z - coords[i].z
-    const len = Math.sqrt(dx * dx + dz * dz)
-    if (len < 0.001) continue
+    const mod = wallMods ? wallMods[i] : null
+    if (mod) {
+      const dx = ex - sx
+      const dz = ez - sz
+      const len = Math.sqrt(dx * dx + dz * dz)
+      if (len >= 0.001) {
+        const ux = dx / len
+        const uz = dz / len
+        const nx = -uz * orient
+        const nz = ux * orient
 
-    const ux = dx / len
-    const uz = dz / len
+        // Length: symmetric expansion/contraction from wall centre
+        if (mod.lengthDelta) {
+          const half = mod.lengthDelta / 2
+          sx -= ux * half
+          sz -= uz * half
+          ex += ux * half
+          ez += uz * half
+        }
 
-    // Length adjustment: extend/shrink symmetrically from center
-    if (mod.lengthDelta) {
-      const half = mod.lengthDelta / 2
-      coords[i].x -= ux * half
-      coords[i].z -= uz * half
-      coords[j].x += ux * half
-      coords[j].z += uz * half
+        // Offset: translate entire wall along its outward normal
+        if (mod.offsetDelta) {
+          sx += nx * mod.offsetDelta
+          sz += nz * mod.offsetDelta
+          ex += nx * mod.offsetDelta
+          ez += nz * mod.offsetDelta
+        }
+      }
     }
 
-    // Offset adjustment: move wall along its normal
-    if (mod.offsetDelta) {
-      const nx = -uz
-      const nz = ux
-      coords[i].x += nx * mod.offsetDelta
-      coords[i].z += nz * mod.offsetDelta
-      coords[j].x += nx * mod.offsetDelta
-      coords[j].z += nz * mod.offsetDelta
-    }
+    // Compute derived properties for this (possibly modified) segment
+    const dx = ex - sx
+    const dz = ez - sz
+    const length = Math.sqrt(dx * dx + dz * dz) || 0.001
+    const nx = (-dz / length) * orient
+    const nz = (dx / length) * orient
+
+    walls.push({
+      wallIndex: i,
+      start: { x: sx, y: 0, z: sz },
+      end: { x: ex, y: 0, z: ez },
+      normal: { x: nx, z: nz },
+      length,
+      height: buildingHeight,
+      midLabel: `Parede ${i + 1}`,
+    })
   }
 
-  return coords
+  return walls
 }
 
-/**
- * Convert local meter coordinates back to [lng, lat] arrays.
- */
-function localMetersToLatlng(localCoords, centroid) {
-  const DEG2RAD = Math.PI / 180
-  const METERS_PER_DEG_LAT = 111320
-  const metersPerDegLng = METERS_PER_DEG_LAT * Math.cos(centroid.lat * DEG2RAD)
-
-  return localCoords.map((p) => [
-    centroid.lng + p.x / metersPerDegLng,
-    centroid.lat + p.z / METERS_PER_DEG_LAT,
-  ])
+/** Shoelace signed-area orientation: +1 CCW, -1 CW. */
+function getPolygonOrient(coords) {
+  let area = 0
+  const n = coords.length
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n
+    area += coords[i].x * coords[j].z - coords[j].x * coords[i].z
+  }
+  return area >= 0 ? 1 : -1
 }
+
