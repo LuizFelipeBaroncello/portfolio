@@ -387,7 +387,7 @@ export default function SunMap() {
       addMapLayers(map, sunPos, customBuildings)
       updateSunLighting(map, sunPos)
     })
-  }, [theme])
+  }, [theme, mapLoaded])
 
   // Update custom buildings source when they change
   useEffect(() => {
