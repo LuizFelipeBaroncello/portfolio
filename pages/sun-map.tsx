@@ -437,6 +437,8 @@ export default function SunMap() {
       if (features.length > 0) {
         const idx = features[0].properties.index
         setSelectedBuildingIdx(idx)
+        setInteriorBuildingIdx(idx)
+        setShowInterior(true)
       } else {
         setSelectedBuildingIdx(null)
       }
@@ -453,8 +455,19 @@ export default function SunMap() {
       updateDrawingPreview(map, [])
     }
 
+    function handleMouseMove(e) {
+      if (drawingMode || movingBuilding) return
+      const hovered = map.queryRenderedFeatures(e.point, {
+        layers: ['custom-buildings-3d'],
+      })
+      map.getCanvas().style.cursor = hovered.length > 0 ? 'pointer' : ''
+    }
+
+    map.on('mousemove', handleMouseMove)
+
     return () => {
       map.off('click', handleClick)
+      map.off('mousemove', handleMouseMove)
     }
   }, [drawingMode, movingBuilding, mapLoaded])
 
