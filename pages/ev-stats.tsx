@@ -532,7 +532,7 @@ export default function EVStats() {
   const maxMonthlyTotal = useMemo(() => {
     return Math.max(
       ...data.map((row) =>
-        VISIBLE_CATEGORIES.reduce((s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0), 0)
+        COST_CATEGORIES.reduce((s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0), 0)
       ),
       1
     )
@@ -650,8 +650,8 @@ export default function EVStats() {
               <div className="ev-categories">
                 {VISIBLE_CATEGORIES.map((cat) => {
                   const val = totals[cat.key] || 0
-                  const allTotal = VISIBLE_CATEGORIES.reduce((s, c) => s + (totals[c.key] || 0), 0)
-                  const pct = allTotal > 0 ? (val / allTotal) * 100 : 0
+                  const allTotal = COST_CATEGORIES.reduce((s, c) => s + (totals[c.key] || 0), 0)
+                  const pct = cat.key !== 'quilometragem' && allTotal > 0 ? (val / allTotal) * 100 : 0
                   const avg = cat.unit === 'km'
                     ? (data.length > 0 ? val / data.length : 0)
                     : val / divisor
@@ -677,7 +677,7 @@ export default function EVStats() {
                         />
                       </div>
                       <div className="ev-cat-footer">
-                        <span className="ev-cat-pct">{pct.toFixed(1)}%</span>
+                        {cat.key !== 'quilometragem' && <span className="ev-cat-pct">{pct.toFixed(1)}%</span>}
                         <span className="ev-cat-avg">
                           {formatCatValue(cat, avg)} {cat.unit === 'km' ? 'por mes' : currentPeriod?.suffix}
                         </span>
@@ -725,7 +725,7 @@ export default function EVStats() {
               <h2 className="ev-section-title">Timeline Mensal</h2>
               <div className="ev-timeline">
                 {[...data].reverse().map((row) => {
-                  const total = VISIBLE_CATEGORIES.reduce(
+                  const total = COST_CATEGORIES.reduce(
                     (s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0),
                     0
                   )
@@ -735,7 +735,7 @@ export default function EVStats() {
                       <span className="ev-month-label">{formatMonth(row.mes)}</span>
                       <div className="ev-month-bar-track">
                         <div className="ev-month-bar-fill" style={{ width: `${barPct}%` }}>
-                          {VISIBLE_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => {
+                          {COST_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => {
                             const catVal = row[cat.key] || 0
                             const catPct = total > 0 ? (catVal / total) * 100 : 0
                             if (catPct < 1) return null
