@@ -2,10 +2,13 @@ import { useMemo } from 'react'
 import * as THREE from 'three'
 
 function createFloorShape(localCoords) {
+  // ShapeGeometry creates geometry in the XY plane. After rotateX(-PI/2),
+  // the Y axis maps to -Z. So we must negate Z here to end up at +Z in 3D,
+  // which is where the walls are placed.
   const shape = new THREE.Shape()
-  shape.moveTo(localCoords[0].x, localCoords[0].z)
+  shape.moveTo(localCoords[0].x, -localCoords[0].z)
   for (let i = 1; i < localCoords.length; i++) {
-    shape.lineTo(localCoords[i].x, localCoords[i].z)
+    shape.lineTo(localCoords[i].x, -localCoords[i].z)
   }
   shape.closePath()
   return shape
@@ -77,7 +80,8 @@ function WallMesh({ wall, buildingHeight, windowConfigs, cameraAngle, hideNearWa
     const camDirX = Math.sin(cameraAngle)
     const camDirZ = Math.cos(cameraAngle)
     const dot = wall.normal.x * camDirX + wall.normal.z * camDirZ
-    return dot > 0.1
+    // dot < 0 means the wall normal opposes the camera direction, i.e. wall faces camera
+    return dot < -0.1
   }, [wall.normal, cameraAngle])
 
   // When hideNearWalls is on, completely hide camera-facing walls
