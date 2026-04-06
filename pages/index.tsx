@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import Head from 'next/head'
 import { useTranslation } from 'next-i18next/pages'
 import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
@@ -128,13 +129,13 @@ export default function Home() {
               </div>
               <div className="card-title">{card.title}</div>
               <div className="card-description">{card.description}</div>
-              <a
+              <Link
                 href={card.link}
                 className="card-link"
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 {t('cards.visit_project')} <span className="card-link-arrow">→</span>
-              </a>
+              </Link>
             </div>
           </Card>
         )

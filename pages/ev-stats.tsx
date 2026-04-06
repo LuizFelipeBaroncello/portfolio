@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Head from 'next/head'
+import Link from 'next/link'
 import { useTranslation } from 'next-i18next/pages'
 import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import type { GetStaticProps } from 'next'
@@ -590,7 +591,7 @@ export default function EVStats() {
         {/* Header */}
         <header className="ev-header">
           <div className="ev-header-left">
-            <a href="/" className="ev-back">
+            <Link href="/" className="ev-back">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M10 12L6 8L10 4"
@@ -600,7 +601,7 @@ export default function EVStats() {
                   strokeLinejoin="round"
                 />
               </svg>
-            </a>
+            </Link>
             <div>
               <h1 className="ev-title">EV Dashboard</h1>
               <p className="ev-subtitle">{t('ev.subtitle')}</p>

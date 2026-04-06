@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Head from 'next/head'
+import Link from 'next/link'
 import { useTranslation } from 'next-i18next/pages'
 import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
 import type { GetStaticProps } from 'next'
@@ -781,7 +782,7 @@ export default function SunMap() {
       {/* Header */}
       <div className="sm-header">
         <div className="sm-header-left">
-          <a href="/" className="sm-back-link" title="Voltar">
+          <Link href="/" className="sm-back-link" title="Voltar">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path
                 d="M10 12L6 8L10 4"
@@ -791,7 +792,7 @@ export default function SunMap() {
                 strokeLinejoin="round"
               />
             </svg>
-          </a>
+          </Link>
           <span className="sm-title">Sun Position Map</span>
         </div>
         <div className="sm-header-right">
