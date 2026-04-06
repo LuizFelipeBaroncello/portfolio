@@ -5,7 +5,7 @@
       "all": "Todos",
       "about": "Sobre",
       "projects": "Projetos",
-      "media": "Midia",
+      "media": "Mídia",
       "config": "Config"
     }
   },
@@ -44,11 +44,25 @@
       "quilometragem": "Quilometragem"
     },
     "periods": {
-      "diaria": { "label": "Diaria", "suffix": "por dia" },
-      "mensal": { "label": "Mensal", "suffix": "por mes" },
+      "diaria": { "label": "Diária", "suffix": "por dia" },
+      "mensal": { "label": "Mensal", "suffix": "por mês" },
       "trimestral": { "label": "Trimestral", "suffix": "por trimestre" },
       "semestral": { "label": "Semestral", "suffix": "por semestre" },
       "anual": { "label": "Anual", "suffix": "por ano" }
-    }
+    },
+    "subtitle": "Custos do carro elétrico",
+    "fallback_warning": "Dados ilustrativos — API indisponível",
+    "total_label": "Total Geral",
+    "months_registered": "{{count}} meses registrados",
+    "average_label": "Média {{period}}",
+    "by_category": "Por Categoria",
+    "per_month": "por mês",
+    "monthly_evolution": "Evolução Mensal",
+    "monthly_timeline": "Timeline Mensal",
+    "detail": "Detalhamento",
+    "month": "Mês",
+    "total": "Total",
+    "loading": "Carregando dados...",
+    "retry": "Tentar novamente"
   }
 }

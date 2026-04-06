@@ -49,6 +49,20 @@
       "trimestral": { "label": "Quarterly", "suffix": "per quarter" },
       "semestral": { "label": "Biannual", "suffix": "per semester" },
       "anual": { "label": "Annual", "suffix": "per year" }
-    }
+    },
+    "subtitle": "Electric car costs",
+    "fallback_warning": "Illustrative data — API unavailable",
+    "total_label": "Overall Total",
+    "months_registered": "{{count}} months recorded",
+    "average_label": "{{period}} Average",
+    "by_category": "By Category",
+    "per_month": "per month",
+    "monthly_evolution": "Monthly Evolution",
+    "monthly_timeline": "Monthly Timeline",
+    "detail": "Breakdown",
+    "month": "Month",
+    "total": "Total",
+    "loading": "Loading data...",
+    "retry": "Try again"
   }
 }

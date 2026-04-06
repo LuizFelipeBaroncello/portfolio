@@ -17,6 +17,8 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 STABLE
+SECURITY DEFINER
+SET search_path = 'finance'
 AS $$
   WITH transacoes_classificadas AS (
     SELECT

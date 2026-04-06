@@ -35,7 +35,7 @@
   },
   "ev": {
     "categories": {
-      "custo_carro": "Financiacion",
+      "custo_carro": "Financiación",
       "combustivel_energia": "Energia",
       "tag_estacionamento": "Peaje / Estacionamiento",
       "limpeza": "Limpieza",
@@ -44,11 +44,25 @@
       "quilometragem": "Kilometraje"
     },
     "periods": {
-      "diaria": { "label": "Diario", "suffix": "por dia" },
+      "diaria": { "label": "Diario", "suffix": "por día" },
       "mensal": { "label": "Mensual", "suffix": "por mes" },
       "trimestral": { "label": "Trimestral", "suffix": "por trimestre" },
       "semestral": { "label": "Semestral", "suffix": "por semestre" },
-      "anual": { "label": "Anual", "suffix": "por ano" }
-    }
+      "anual": { "label": "Anual", "suffix": "por año" }
+    },
+    "subtitle": "Costos del auto eléctrico",
+    "fallback_warning": "Datos ilustrativos — API no disponible",
+    "total_label": "Total General",
+    "months_registered": "{{count}} meses registrados",
+    "average_label": "Promedio {{period}}",
+    "by_category": "Por Categoría",
+    "per_month": "por mes",
+    "monthly_evolution": "Evolución Mensual",
+    "monthly_timeline": "Línea de Tiempo Mensual",
+    "detail": "Desglose",
+    "month": "Mes",
+    "total": "Total",
+    "loading": "Cargando datos...",
+    "retry": "Intentar de nuevo"
   }
 }

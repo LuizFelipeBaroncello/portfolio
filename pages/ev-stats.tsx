@@ -38,7 +38,7 @@ const CATEGORIES: Category[] = [
 
 const HIDDEN_CATEGORIES = ['custo_carro']
 const VISIBLE_CATEGORIES = CATEGORIES.filter((c) => !HIDDEN_CATEGORIES.includes(c.key))
-const COST_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'quilometragem')
+const COST_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'quilometragem' && !HIDDEN_CATEGORIES.includes(c.key))
 
 const COLOR_MAP = {
   blue: '#4a9eff',
@@ -66,46 +66,52 @@ const PERIODS = [
   { key: 'anual', label: 'Annual', suffix: 'per year' }
 ]
 
-function formatBRL(value) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value)
+const BRL_TO_USD = 5.70
+
+function formatCurrency(value, locale) {
+  if (locale === 'pt') {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+  }
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value / BRL_TO_USD)
 }
 
 function formatKM(value) {
   return new Intl.NumberFormat('pt-BR').format(Math.round(value)) + ' km'
 }
 
-function formatCatValue(cat, value) {
-  return cat.unit === 'km' ? formatKM(value) : formatBRL(value)
+function formatCatValue(cat, value, locale) {
+  return cat.unit === 'km' ? formatKM(value) : formatCurrency(value, locale)
 }
 
-function formatCatValueCompact(cat, value) {
+function formatCatValueCompact(cat, value, locale) {
   if (cat.unit === 'km') {
     if (value >= 1000) return `${(value / 1000).toFixed(1)}k km`
     return `${Math.round(value)} km`
   }
-  if (value >= 1000) return `R$ ${(value / 1000).toFixed(1)}k`
-  return `R$ ${Math.round(value)}`
+  const symbol = locale === 'pt' ? 'R$' : '$'
+  const v = locale === 'pt' ? value : value / BRL_TO_USD
+  if (v >= 1000) return `${symbol} ${(v / 1000).toFixed(1)}k`
+  return `${symbol} ${Math.round(v)}`
 }
 
-function formatMonth(mes) {
-  const [year, month] = mes.split('-')
-  const months = [
-    'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-  ]
-  return `${months[parseInt(month, 10) - 1]} ${year}`
+const MONTHS_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+function getMonthNames(locale) {
+  if (locale === 'es') return MONTHS_ES
+  if (locale === 'en') return MONTHS_EN
+  return MONTHS_PT
 }
 
-function formatMonthShort(mes) {
+function formatMonth(mes, locale) {
   const [year, month] = mes.split('-')
-  const months = [
-    'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
-  ]
-  return `${months[parseInt(month, 10) - 1]} ${year.slice(2)}`
+  return `${getMonthNames(locale)[parseInt(month, 10) - 1]} ${year}`
+}
+
+function formatMonthShort(mes, locale) {
+  const [year, month] = mes.split('-')
+  return `${getMonthNames(locale)[parseInt(month, 10) - 1]} ${year.slice(2)}`
 }
 
 function getDivisor(period, monthCount) {
@@ -119,11 +125,13 @@ function getDivisor(period, monthCount) {
   return Math.max(map[period] || monthCount, 1)
 }
 
-function formatBRLCompact(value) {
-  if (value >= 1000) {
-    return `R$ ${(value / 1000).toFixed(1)}k`
+function formatCurrencyCompact(value, locale) {
+  const symbol = locale === 'pt' ? 'R$' : '$'
+  const v = locale === 'pt' ? value : value / BRL_TO_USD
+  if (v >= 1000) {
+    return `${symbol} ${(v / 1000).toFixed(1)}k`
   }
-  return `R$ ${Math.round(value)}`
+  return `${symbol} ${Math.round(v)}`
 }
 
 function toMonthIndex(mes) {
@@ -179,7 +187,7 @@ function interpolateMileage(months) {
 // ─── SVG Chart ───
 const CHART = { w: 800, h: 300, padL: 70, padR: 20, padT: 20, padB: 40 }
 
-function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }: { data: DataRow[], visibleCats: Set<string>, onHover: (i: number | null) => void, hoveredIndex: number | null }) {
+function EvolutionChart({ data, visibleCats, onHover, hoveredIndex, locale = 'en' }: { data: DataRow[], visibleCats: Set<string>, onHover: (i: number | null) => void, hoveredIndex: number | null, locale?: string }) {
   const plotW = CHART.w - CHART.padL - CHART.padR
   const plotH = CHART.h - CHART.padT - CHART.padB
 
@@ -206,7 +214,7 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }: { data: Da
   const gridCount = 5
   const gridLines = Array.from({ length: gridCount + 1 }, (_, i) => {
     const val = (maxVal / gridCount) * i
-    return { y: getY(val), label: formatBRLCompact(val) }
+    return { y: getY(val), label: formatCurrencyCompact(val, locale) }
   })
 
   // Build polylines for each visible category
@@ -243,7 +251,7 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }: { data: Da
   // Rebuild with adjusted scale
   const adjGridLines = Array.from({ length: gridCount + 1 }, (_, i) => {
     const val = (effectiveMax / gridCount) * i
-    return { y: getYAdj(val), label: formatBRLCompact(val) }
+    return { y: getYAdj(val), label: formatCurrencyCompact(val, locale) }
   })
 
   const adjLines = VISIBLE_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => {
@@ -341,7 +349,7 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }: { data: Da
               y={CHART.h - 8}
               textAnchor="middle"
             >
-              {formatMonthShort(row.mes)}
+              {formatMonthShort(row.mes, locale)}
             </text>
           ) : null
         )}
@@ -376,25 +384,25 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }: { data: Da
 }
 
 // ─── Tooltip ───
-function ChartTooltip({ data, index, visibleCats, categories = VISIBLE_CATEGORIES, costCategories = COST_CATEGORIES, totalLabel = 'Total' }: { data: DataRow[], index: number | null, visibleCats: Set<string>, categories?: Category[], costCategories?: Category[], totalLabel?: string }) {
+function ChartTooltip({ data, index, visibleCats, categories = VISIBLE_CATEGORIES, costCategories = COST_CATEGORIES, totalLabel = 'Total', locale = 'en' }: { data: DataRow[], index: number | null, visibleCats: Set<string>, categories?: Category[], costCategories?: Category[], totalLabel?: string, locale?: string }) {
   if (index === null || !data[index]) return null
   const row = data[index]
 
   return (
     <div className="ev-chart-tooltip">
-      <div className="ev-tooltip-month">{formatMonth(row.mes)}</div>
+      <div className="ev-tooltip-month">{formatMonth(row.mes, locale)}</div>
       {categories.filter((c) => visibleCats.has(c.key)).map((cat) => (
         <div key={cat.key} className="ev-tooltip-row">
           <span className={`ev-tooltip-dot ${cat.color}`} />
           <span className="ev-tooltip-label">{cat.label}</span>
-          <span className="ev-tooltip-value">{formatCatValue(cat, row[cat.key])}</span>
+          <span className="ev-tooltip-value">{formatCatValue(cat, row[cat.key], locale)}</span>
         </div>
       ))}
       <div className="ev-tooltip-row ev-tooltip-total">
         <span className="ev-tooltip-label">{totalLabel}</span>
         <span className="ev-tooltip-value">
-          {formatBRL(
-            costCategories.reduce((s, c) => s + (visibleCats.has(c.key) ? row[c.key] : 0), 0)
+          {formatCurrency(
+            costCategories.reduce((s, c) => s + (visibleCats.has(c.key) ? row[c.key] : 0), 0), locale
           )}
         </span>
       </div>
@@ -404,7 +412,8 @@ function ChartTooltip({ data, index, visibleCats, categories = VISIBLE_CATEGORIE
 
 // ─── Main Page ───
 export default function EVStats() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
+  const locale = i18n.language || 'en'
 
   const translatedCategories = useMemo(() => CATEGORIES.map((c) => ({
     ...c,
@@ -439,7 +448,8 @@ export default function EVStats() {
       if (savedCats) {
         const parsed = JSON.parse(savedCats)
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setVisibleCats(new Set(parsed))
+          const sanitized = parsed.filter((k) => !HIDDEN_CATEGORIES.includes(k))
+          if (sanitized.length > 0) setVisibleCats(new Set(sanitized))
         }
       }
       const savedPeriod = localStorage.getItem('ev-period')
@@ -593,7 +603,7 @@ export default function EVStats() {
             </a>
             <div>
               <h1 className="ev-title">EV Dashboard</h1>
-              <p className="ev-subtitle">Custos do carro eletrico</p>
+              <p className="ev-subtitle">{t('ev.subtitle')}</p>
             </div>
           </div>
           <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
@@ -613,7 +623,7 @@ export default function EVStats() {
         {loading && (
           <div className="ev-loading">
             <div className="ev-spinner" />
-            <p>Carregando dados...</p>
+            <p>{t('ev.loading')}</p>
           </div>
         )}
 
@@ -627,9 +637,9 @@ export default function EVStats() {
             {usingFallback && (
               <div className="ev-fallback-banner">
                 <span className="ev-fallback-icon">⚠</span>
-                <span className="ev-fallback-text">Dados ilustrativos — API indisponível</span>
+                <span className="ev-fallback-text">{t('ev.fallback_warning')}</span>
                 <button className="ev-fallback-retry" onClick={fetchData}>
-                  Tentar novamente
+                  {t('ev.retry')}
                 </button>
               </div>
             )}
@@ -652,14 +662,14 @@ export default function EVStats() {
             {/* Summary Cards */}
             <div className="ev-summary">
               <div className="ev-summary-card ev-summary-highlight">
-                <span className="ev-summary-label">Total Geral</span>
-                <span className="ev-summary-value">{formatBRL(visibleTotal)}</span>
-                <span className="ev-summary-meta">{data.length} meses registrados</span>
+                <span className="ev-summary-label">{t('ev.total_label')}</span>
+                <span className="ev-summary-value">{formatCurrency(visibleTotal, locale)}</span>
+                <span className="ev-summary-meta">{t('ev.months_registered', { count: data.length })}</span>
               </div>
               <div className="ev-summary-card">
-                <span className="ev-summary-label">Media {currentPeriod?.label}</span>
+                <span className="ev-summary-label">{t('ev.average_label', { period: currentPeriod?.label })}</span>
                 <span className="ev-summary-value">
-                  {formatBRL(visibleTotal / divisor)}
+                  {formatCurrency(visibleTotal / divisor, locale)}
                 </span>
                 <span className="ev-summary-meta">{currentPeriod?.suffix}</span>
               </div>
@@ -667,7 +677,7 @@ export default function EVStats() {
 
             {/* Category Breakdown */}
             <section className="ev-section">
-              <h2 className="ev-section-title">Por Categoria</h2>
+              <h2 className="ev-section-title">{t('ev.by_category')}</h2>
               <div className="ev-categories">
                 {translatedVisibleCats.map((cat) => {
                   const val = totals[cat.key] || 0
@@ -690,7 +700,7 @@ export default function EVStats() {
                         <span className="ev-cat-icon">{cat.icon}</span>
                         <span className="ev-cat-label">{cat.label}</span>
                       </div>
-                      <span className="ev-cat-value">{formatCatValue(cat, val)}</span>
+                      <span className="ev-cat-value">{formatCatValue(cat, val, locale)}</span>
                       <div className="ev-cat-bar-track">
                         <div
                           className={`ev-cat-bar-fill ${cat.color}`}
@@ -700,7 +710,7 @@ export default function EVStats() {
                       <div className="ev-cat-footer">
                         {cat.key !== 'quilometragem' && <span className="ev-cat-pct">{pct.toFixed(1)}%</span>}
                         <span className="ev-cat-avg">
-                          {formatCatValue(cat, avg)} {cat.unit === 'km' ? 'por mes' : currentPeriod?.suffix}
+                          {formatCatValue(cat, avg, locale)} {cat.unit === 'km' ? t('ev.per_month') : currentPeriod?.suffix}
                         </span>
                       </div>
                     </div>
@@ -725,13 +735,14 @@ export default function EVStats() {
 
             {/* Evolution Chart */}
             <section className="ev-section">
-              <h2 className="ev-section-title">Evolucao Mensal</h2>
+              <h2 className="ev-section-title">{t('ev.monthly_evolution')}</h2>
               <div className="ev-chart-container">
                 <EvolutionChart
                   data={data}
                   visibleCats={visibleCats}
                   onHover={setHoveredIndex}
                   hoveredIndex={hoveredIndex}
+                  locale={locale}
                 />
                 <ChartTooltip
                   data={data}
@@ -739,14 +750,15 @@ export default function EVStats() {
                   visibleCats={visibleCats}
                   categories={translatedVisibleCats}
                   costCategories={translatedCostCats}
-                  totalLabel="Total"
+                  totalLabel={t('ev.total')}
+                  locale={locale}
                 />
               </div>
             </section>
 
             {/* Monthly Timeline */}
             <section className="ev-section">
-              <h2 className="ev-section-title">Timeline Mensal</h2>
+              <h2 className="ev-section-title">{t('ev.monthly_timeline')}</h2>
               <div className="ev-timeline">
                 {[...data].reverse().map((row) => {
                   const total = translatedCostCats.reduce(
@@ -756,7 +768,7 @@ export default function EVStats() {
                   const barPct = (total / maxMonthlyTotal) * 100
                   return (
                     <div key={row.mes} className="ev-month-row">
-                      <span className="ev-month-label">{formatMonth(row.mes)}</span>
+                      <span className="ev-month-label">{formatMonth(row.mes, locale)}</span>
                       <div className="ev-month-bar-track">
                         <div className="ev-month-bar-fill" style={{ width: `${barPct}%` }}>
                           {translatedCostCats.filter((c) => visibleCats.has(c.key)).map((cat) => {
@@ -768,17 +780,17 @@ export default function EVStats() {
                                 key={cat.key}
                                 className={`ev-month-segment ${cat.color}`}
                                 style={{ width: `${catPct}%` }}
-                                title={`${cat.label}: ${formatCatValue(cat, catVal)}`}
+                                title={`${cat.label}: ${formatCatValue(cat, catVal, locale)}`}
                               />
                             )
                           })}
                         </div>
                       </div>
-                      <span className="ev-month-value">{formatBRL(
+                      <span className="ev-month-value">{formatCurrency(
                         translatedCostCats.reduce(
                           (s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0),
                           0
-                        )
+                        ), locale
                       )}</span>
                     </div>
                   )
@@ -788,19 +800,19 @@ export default function EVStats() {
 
             {/* Detail Table */}
             <section className="ev-section">
-              <h2 className="ev-section-title">Detalhamento</h2>
+              <h2 className="ev-section-title">{t('ev.detail')}</h2>
               <div className="ev-table-wrap">
                 <table className="ev-table">
                   <thead>
                     <tr>
-                      <th>Mes</th>
+                      <th>{t('ev.month')}</th>
                       {translatedVisibleCats.filter((c) => visibleCats.has(c.key)).map((c) => (
                         <th key={c.key}>
                           <span className="ev-th-icon">{c.icon}</span>
                           {c.label}
                         </th>
                       ))}
-                      <th>Total</th>
+                      <th>{t('ev.total')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -811,11 +823,11 @@ export default function EVStats() {
                       )
                       return (
                         <tr key={row.mes}>
-                          <td className="ev-td-month">{formatMonth(row.mes)}</td>
+                          <td className="ev-td-month">{formatMonth(row.mes, locale)}</td>
                           {translatedVisibleCats.filter((c) => visibleCats.has(c.key)).map((cat) => (
-                            <td key={cat.key}>{formatCatValue(cat, row[cat.key] || 0)}</td>
+                            <td key={cat.key}>{formatCatValue(cat, row[cat.key] || 0, locale)}</td>
                           ))}
-                          <td className="ev-td-total">{formatBRL(total)}</td>
+                          <td className="ev-td-total">{formatCurrency(total, locale)}</td>
                         </tr>
                       )
                     })}

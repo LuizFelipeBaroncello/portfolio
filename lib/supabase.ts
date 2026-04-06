@@ -5,7 +5,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Server-side client with service role key (for API routes)
+// Server-side client for API routes (uses anon key; RPC functions use SECURITY DEFINER to bypass RLS)
 export function createServiceClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
