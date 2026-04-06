@@ -10,9 +10,9 @@ function PatchMesh({ patch, sunAltitude }) {
     if (patch.surface === 'floor') {
       // Floor patch: use XZ plane
       const shape = new THREE.Shape()
-      shape.moveTo(pts[0].x, pts[0].z)
+      shape.moveTo(pts[0].x, -pts[0].z)
       for (let i = 1; i < pts.length; i++) {
-        shape.lineTo(pts[i].x, pts[i].z)
+        shape.lineTo(pts[i].x, -pts[i].z)
       }
       shape.closePath()
       const geo = new THREE.ShapeGeometry(shape)

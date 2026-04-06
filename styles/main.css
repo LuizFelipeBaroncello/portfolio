@@ -220,6 +220,42 @@ a {
   height: 16px;
 }
 
+/* ===== Language Switcher ===== */
+.language-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.lang-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color var(--transition-fast);
+  letter-spacing: 0.04em;
+}
+
+.lang-btn:hover {
+  color: var(--text-primary);
+}
+
+.lang-btn.active {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.lang-sep {
+  color: var(--border-card);
+  font-size: 11px;
+  user-select: none;
+}
+
 /* ===== Bento Grid ===== */
 .bento-grid {
   width: 100%;
@@ -505,6 +541,122 @@ a {
 .linkedin-card .linkedin-icon svg {
   width: 60px;
   height: 60px;
+}
+
+/* ===== Theme Card ===== */
+.theme-card.dark {
+  background: #1a1a2e;
+  border-color: #1a1a2e;
+}
+
+.theme-card.light {
+  background: #fef3c7;
+  border-color: #fde68a;
+}
+
+.theme-card .card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.theme-card .theme-card-icon {
+  opacity: 0.9;
+}
+
+.theme-card.dark .theme-card-icon {
+  color: #fbbf24;
+}
+
+.theme-card.light .theme-card-icon {
+  color: #6366f1;
+}
+
+.theme-card .theme-card-icon svg {
+  width: 52px;
+  height: 52px;
+}
+
+.theme-card .corner-link {
+  border: none;
+  background: none;
+}
+
+.theme-card .corner-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ===== Language Card ===== */
+.language-card {
+  background: var(--bg-card);
+  border-color: var(--border-card);
+}
+
+.language-card .card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.language-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  padding: 12px;
+}
+
+.language-card-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: 12px;
+  font-variation-settings: 'wght' 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  letter-spacing: 0.04em;
+}
+
+[data-theme='light'] .language-card-btn {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.language-card-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+[data-theme='light'] .language-card-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.language-card-btn.active {
+  background: var(--bg-tag-active);
+  color: var(--text-tag-active);
+  font-variation-settings: 'wght' 700;
+  border-color: var(--border-card-hover);
+}
+
+.language-card-flag {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.language-card-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /* ===== Music Card ===== */

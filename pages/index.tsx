@@ -1,28 +1,39 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import Head from 'next/head'
+import { useTranslation } from 'next-i18next/pages'
+import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
+import type { GetStaticProps } from 'next'
 import Card from '../components/Card'
 import FilterBar from '../components/FilterBar'
 import BioCard from '../components/BioCard'
 import MapCard from '../components/MapCard'
 import LinkedInCard from '../components/LinkedInCard'
 import MusicCard from '../components/MusicCard'
+import ThemeCard from '../components/ThemeCard'
+import LanguageCard from '../components/LanguageCard'
 import { useTheme } from '../lib/use-theme'
-import { CARDS_DATA, CATEGORY_FILTERS, GRID_LAYOUTS, CardData, GridLayouts } from '../lib/cards-data'
+import { getCardsData, getCategoryFilters, GRID_LAYOUTS, CardData, GridLayouts, FilterKey } from '../lib/cards-data'
 
 const ResponsiveGridLayout = dynamic(() => import('../components/BentoGrid'), { ssr: false })
 
 type FilterFn = (card: CardData) => boolean
 
-const FILTER_MAP: Record<string, FilterFn> = {
-  All: () => true,
-  About: (card) => ['bio', 'map', 'social', 'linkedin'].includes(card.id),
-  Projects: (card) => card.type === 'project',
-  Media: (card) => ['music'].includes(card.id),
+const FILTER_MAP: Record<FilterKey, FilterFn> = {
+  all: () => true,
+  about: (card) => ['bio', 'map', 'social', 'linkedin'].includes(card.id),
+  projects: (card) => card.type === 'project',
+  media: (card) => ['music'].includes(card.id),
+  config: (card) => ['theme', 'language'].includes(card.id),
 }
 
 export default function Home() {
-  const [activeFilter, setActiveFilter] = useState('All')
+  const { t } = useTranslation('common')
+
+  const CARDS_DATA = useMemo(() => getCardsData(t), [t])
+  const CATEGORY_FILTERS = useMemo(() => getCategoryFilters(t), [t])
+
+  const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
   const [theme, toggleTheme] = useTheme()
   const [layouts, setLayouts] = useState<GridLayouts>(GRID_LAYOUTS)
   const [mounted, setMounted] = useState(false)
@@ -34,7 +45,6 @@ export default function Home() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        // Validate: if every item in any breakpoint is at x=0,y=0, layout is corrupted
         const isCorrupted = Object.values(parsed).some((bp) =>
           Array.isArray(bp) && bp.length > 1 && bp.every((item: any) => item.x === 0 && item.y === 0)
         )
@@ -60,7 +70,7 @@ export default function Home() {
   }
 
   const filteredLayouts = useMemo(() => {
-    if (activeFilter === 'All') return layouts
+    if (activeFilter === 'all') return layouts
 
     const filterFn = FILTER_MAP[activeFilter]
     const result: GridLayouts = {} as GridLayouts
@@ -82,10 +92,10 @@ export default function Home() {
     }
 
     return result
-  }, [activeFilter, layouts])
+  }, [activeFilter, layouts, CARDS_DATA])
 
   const isFiltered = (card: CardData) => {
-    if (activeFilter === 'All') return false
+    if (activeFilter === 'all') return false
     return !FILTER_MAP[activeFilter]?.(card)
   }
 
@@ -94,18 +104,17 @@ export default function Home() {
 
     switch (card.type) {
       case 'bio':
-        return (
-          <BioCard
-            key={card.id}
-            isFiltered={filtered}
-          />
-        )
+        return <BioCard key={card.id} isFiltered={filtered} />
       case 'map':
         return <MapCard key={card.id} isFiltered={filtered} />
       case 'linkedin':
         return <LinkedInCard key={card.id} isFiltered={filtered} />
       case 'music':
         return <MusicCard key={card.id} isFiltered={filtered} />
+      case 'theme':
+        return <ThemeCard key={card.id} theme={theme} onToggle={toggleTheme} isFiltered={filtered} />
+      case 'language':
+        return <LanguageCard key={card.id} isFiltered={filtered} />
       case 'project':
         return (
           <Card key={card.id} className="project-card" isFiltered={filtered} accent={card.accent}>
@@ -115,7 +124,7 @@ export default function Home() {
                   className="card-label-dot"
                   style={{ background: `var(--accent-${card.accent})` }}
                 />
-                Project
+                {t('cards.label_project')}
               </div>
               <div className="card-title">{card.title}</div>
               <div className="card-description">{card.description}</div>
@@ -124,7 +133,7 @@ export default function Home() {
                 className="card-link"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                Visit project <span className="card-link-arrow">→</span>
+                {t('cards.visit_project')} <span className="card-link-arrow">→</span>
               </a>
             </div>
           </Card>
@@ -138,7 +147,7 @@ export default function Home() {
                   className="card-label-dot"
                   style={{ background: 'var(--accent-pink)' }}
                 />
-                Connect
+                {t('cards.label_connect')}
               </div>
               <div className="social-links">
                 <a
@@ -183,17 +192,17 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>Luiz Felipe Baroncello — Software Engineer</title>
-        <meta name="description" content="Portfolio de Luiz Felipe Baroncello, Software Engineer em Santa Catarina, Brasil. Projetos em Java, React, Spring, Microservices e Cloud." />
+        <title>{t('meta.home_title')}</title>
+        <meta name="description" content={t('meta.home_description')} />
         <meta name="keywords" content="software engineer, java, react, spring, microservices, cloud, santa catarina, brasil, portfolio" />
-        <meta property="og:title" content="Luiz Felipe Baroncello — Software Engineer" />
-        <meta property="og:description" content="Portfolio de Luiz Felipe Baroncello, Software Engineer em Santa Catarina, Brasil. Projetos em Java, React, Spring, Microservices e Cloud." />
+        <meta property="og:title" content={t('meta.home_title')} />
+        <meta property="og:description" content={t('meta.home_description')} />
         <meta property="og:image" content="/og-image.svg" />
         <meta property="og:url" content="https://luizfelipebaroncello.com/" />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Luiz Felipe Baroncello — Software Engineer" />
-        <meta name="twitter:description" content="Portfolio de Luiz Felipe Baroncello, Software Engineer em Santa Catarina, Brasil. Projetos em Java, React, Spring, Microservices e Cloud." />
+        <meta name="twitter:title" content={t('meta.home_title')} />
+        <meta name="twitter:description" content={t('meta.home_description')} />
         <meta name="twitter:image" content="/og-image.svg" />
       </Head>
       <div className="page-container">
@@ -201,10 +210,9 @@ export default function Home() {
           filters={CATEGORY_FILTERS}
           activeFilter={activeFilter}
           onSetFilter={setActiveFilter}
-          theme={theme}
-          onToggleTheme={toggleTheme}
           logo="LFRB"
           contactHref="mailto:luizfelipe_rv97@hotmail.com"
+          contactLabel={t('nav.contact')}
         />
 
         {mounted && (
@@ -231,4 +239,12 @@ export default function Home() {
       </div>
     </>
   )
+}
+
+export const getStaticProps: GetStaticProps = async ({ locale }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+    },
+  }
 }

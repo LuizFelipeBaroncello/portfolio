@@ -1,6 +1,8 @@
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
 import { Analytics } from '@vercel/analytics/next'
+import { appWithTranslation } from 'next-i18next/pages'
+import nextI18NextConfig from '../next-i18next.config'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import '../styles/main.css'
@@ -10,7 +12,7 @@ import '../styles/sun-map.css'
 import '../styles/sun-map-interior.css'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
-export default function App({ Component, pageProps }: AppProps) {
+function App({ Component, pageProps }: AppProps) {
   return (
     <>
       <Head>
@@ -28,3 +30,5 @@ export default function App({ Component, pageProps }: AppProps) {
     </>
   )
 }
+
+export default appWithTranslation(App, nextI18NextConfig)

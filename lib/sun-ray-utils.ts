@@ -340,9 +340,9 @@ export function sunFacesWall(sunAzimuth: number, sunAltitude: number, wallNormal
   const sunTowardZ = -Math.cos(azRad)
 
   // Dot product of sun direction with wall outward normal
-  // If positive, sun faces the exterior of this wall
+  // If negative, sunlight opposes the outward normal = hits the exterior of this wall
   const dot = sunTowardX * wallNormal.x + sunTowardZ * wallNormal.z
-  return dot > 0
+  return dot < 0
 }
 
 /**

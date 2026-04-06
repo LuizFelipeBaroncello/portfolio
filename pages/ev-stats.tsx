@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Head from 'next/head'
+import { useTranslation } from 'next-i18next/pages'
+import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
+import type { GetStaticProps } from 'next'
 import { useTheme } from '../lib/use-theme'
 import ErrorMessage from '../components/ErrorMessage'
 import EV_STATS_FALLBACK from '../lib/ev-stats-fallback'
@@ -24,13 +27,13 @@ interface DataRow {
 }
 
 const CATEGORIES: Category[] = [
-  { key: 'custo_carro', label: 'Financiamento', icon: '🚗', color: 'blue' },
-  { key: 'combustivel_energia', label: 'Energia', icon: '⚡', color: 'green' },
-  { key: 'tag_estacionamento', label: 'Tag / Estacionamento', icon: '🅿️', color: 'purple' },
-  { key: 'limpeza', label: 'Limpeza', icon: '✨', color: 'teal' },
-  { key: 'documentos_seguro', label: 'Documentos / Seguro', icon: '📄', color: 'orange' },
-  { key: 'outros', label: 'Outros', icon: '📦', color: 'pink' },
-  { key: 'quilometragem', label: 'Quilometragem', icon: '🛣️', color: 'cyan', unit: 'km' }
+  { key: 'custo_carro', label: 'Financing', icon: '🚗', color: 'blue' },
+  { key: 'combustivel_energia', label: 'Energy', icon: '⚡', color: 'green' },
+  { key: 'tag_estacionamento', label: 'Toll / Parking', icon: '🅿️', color: 'purple' },
+  { key: 'limpeza', label: 'Cleaning', icon: '✨', color: 'teal' },
+  { key: 'documentos_seguro', label: 'Documents / Insurance', icon: '📄', color: 'orange' },
+  { key: 'outros', label: 'Others', icon: '📦', color: 'pink' },
+  { key: 'quilometragem', label: 'Mileage', icon: '🛣️', color: 'cyan', unit: 'km' }
 ]
 
 const HIDDEN_CATEGORIES = ['custo_carro']
@@ -56,11 +59,11 @@ const MILEAGE_KNOWN_POINTS = [
 ]
 
 const PERIODS = [
-  { key: 'diaria', label: 'Diaria', suffix: 'por dia' },
-  { key: 'mensal', label: 'Mensal', suffix: 'por mes' },
-  { key: 'trimestral', label: 'Trimestral', suffix: 'por trimestre' },
-  { key: 'semestral', label: 'Semestral', suffix: 'por semestre' },
-  { key: 'anual', label: 'Anual', suffix: 'por ano' }
+  { key: 'diaria', label: 'Daily', suffix: 'per day' },
+  { key: 'mensal', label: 'Monthly', suffix: 'per month' },
+  { key: 'trimestral', label: 'Quarterly', suffix: 'per quarter' },
+  { key: 'semestral', label: 'Biannual', suffix: 'per semester' },
+  { key: 'anual', label: 'Annual', suffix: 'per year' }
 ]
 
 function formatBRL(value) {
@@ -373,14 +376,14 @@ function EvolutionChart({ data, visibleCats, onHover, hoveredIndex }: { data: Da
 }
 
 // ─── Tooltip ───
-function ChartTooltip({ data, index, visibleCats }: { data: DataRow[], index: number | null, visibleCats: Set<string> }) {
+function ChartTooltip({ data, index, visibleCats, categories = VISIBLE_CATEGORIES, costCategories = COST_CATEGORIES, totalLabel = 'Total' }: { data: DataRow[], index: number | null, visibleCats: Set<string>, categories?: Category[], costCategories?: Category[], totalLabel?: string }) {
   if (index === null || !data[index]) return null
   const row = data[index]
 
   return (
     <div className="ev-chart-tooltip">
       <div className="ev-tooltip-month">{formatMonth(row.mes)}</div>
-      {VISIBLE_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => (
+      {categories.filter((c) => visibleCats.has(c.key)).map((cat) => (
         <div key={cat.key} className="ev-tooltip-row">
           <span className={`ev-tooltip-dot ${cat.color}`} />
           <span className="ev-tooltip-label">{cat.label}</span>
@@ -388,10 +391,10 @@ function ChartTooltip({ data, index, visibleCats }: { data: DataRow[], index: nu
         </div>
       ))}
       <div className="ev-tooltip-row ev-tooltip-total">
-        <span className="ev-tooltip-label">Total Custos</span>
+        <span className="ev-tooltip-label">{totalLabel}</span>
         <span className="ev-tooltip-value">
           {formatBRL(
-            COST_CATEGORIES.reduce((s, c) => s + (visibleCats.has(c.key) ? row[c.key] : 0), 0)
+            costCategories.reduce((s, c) => s + (visibleCats.has(c.key) ? row[c.key] : 0), 0)
           )}
         </span>
       </div>
@@ -401,6 +404,25 @@ function ChartTooltip({ data, index, visibleCats }: { data: DataRow[], index: nu
 
 // ─── Main Page ───
 export default function EVStats() {
+  const { t } = useTranslation('common')
+
+  const translatedCategories = useMemo(() => CATEGORIES.map((c) => ({
+    ...c,
+    label: t(`ev.categories.${c.key}`),
+  })), [t])
+
+  const translatedVisibleCats = useMemo(() =>
+    translatedCategories.filter((c) => !HIDDEN_CATEGORIES.includes(c.key)), [translatedCategories])
+
+  const translatedCostCats = useMemo(() =>
+    translatedCategories.filter((c) => c.key !== 'quilometragem'), [translatedCategories])
+
+  const translatedPeriods = useMemo(() => PERIODS.map((p) => ({
+    ...p,
+    label: t(`ev.periods.${p.key}.label`),
+    suffix: t(`ev.periods.${p.key}.suffix`),
+  })), [t])
+
   const [data, setData] = useState<DataRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -527,7 +549,7 @@ export default function EVStats() {
   }, [data, visibleCats])
 
   const divisor = getDivisor(period, data.length)
-  const currentPeriod = PERIODS.find((p) => p.key === period)
+  const currentPeriod = translatedPeriods.find((p) => p.key === period)
 
   const maxMonthlyTotal = useMemo(() => {
     return Math.max(
@@ -541,17 +563,16 @@ export default function EVStats() {
   return (
     <>
       <Head>
-        <title>EV Dashboard — Carro Eletrico</title>
-        <meta name="description" content="Dashboard de custos do carro elétrico. Análise de gastos com energia, seguro, manutenção e quilometragem." />
-        <meta name="keywords" content="carro elétrico, ev, dashboard, custos, energia, quilometragem, seguro" />
-        <meta property="og:title" content="EV Dashboard — Carro Elétrico" />
-        <meta property="og:description" content="Dashboard de custos do carro elétrico. Análise de gastos com energia, seguro, manutenção e quilometragem." />
+        <title>{t('meta.ev_title')}</title>
+        <meta name="description" content={t('meta.ev_description')} />
+        <meta property="og:title" content={t('meta.ev_title')} />
+        <meta property="og:description" content={t('meta.ev_description')} />
         <meta property="og:image" content="/og-image.svg" />
         <meta property="og:url" content="https://luizfelipebaroncello.com/ev-stats" />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="EV Dashboard — Carro Elétrico" />
-        <meta name="twitter:description" content="Dashboard de custos do carro elétrico. Análise de gastos com energia, seguro, manutenção e quilometragem." />
+        <meta name="twitter:title" content={t('meta.ev_title')} />
+        <meta name="twitter:description" content={t('meta.ev_description')} />
         <meta name="twitter:image" content="/og-image.svg" />
       </Head>
 
@@ -616,7 +637,7 @@ export default function EVStats() {
             {/* Period Selector */}
             <div className="ev-period-bar-wrapper">
               <div className="ev-period-bar">
-                {PERIODS.map((p) => (
+                {translatedPeriods.map((p) => (
                   <button
                     key={p.key}
                     className={`ev-period-tag${period === p.key ? ' active' : ''}`}
@@ -648,9 +669,9 @@ export default function EVStats() {
             <section className="ev-section">
               <h2 className="ev-section-title">Por Categoria</h2>
               <div className="ev-categories">
-                {VISIBLE_CATEGORIES.map((cat) => {
+                {translatedVisibleCats.map((cat) => {
                   const val = totals[cat.key] || 0
-                  const allTotal = COST_CATEGORIES.reduce((s, c) => s + (totals[c.key] || 0), 0)
+                  const allTotal = translatedCostCats.reduce((s, c) => s + (totals[c.key] || 0), 0)
                   const pct = cat.key !== 'quilometragem' && allTotal > 0 ? (val / allTotal) * 100 : 0
                   const avg = cat.unit === 'km'
                     ? (data.length > 0 ? val / data.length : 0)
@@ -690,7 +711,7 @@ export default function EVStats() {
 
             {/* Interactive Legend */}
             <div className="ev-legend">
-              {VISIBLE_CATEGORIES.map((cat) => (
+              {translatedVisibleCats.map((cat) => (
                 <button
                   key={cat.key}
                   className={`ev-legend-btn${!visibleCats.has(cat.key) ? ' hidden' : ''}`}
@@ -716,6 +737,9 @@ export default function EVStats() {
                   data={data}
                   index={hoveredIndex}
                   visibleCats={visibleCats}
+                  categories={translatedVisibleCats}
+                  costCategories={translatedCostCats}
+                  totalLabel="Total"
                 />
               </div>
             </section>
@@ -725,7 +749,7 @@ export default function EVStats() {
               <h2 className="ev-section-title">Timeline Mensal</h2>
               <div className="ev-timeline">
                 {[...data].reverse().map((row) => {
-                  const total = COST_CATEGORIES.reduce(
+                  const total = translatedCostCats.reduce(
                     (s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0),
                     0
                   )
@@ -735,7 +759,7 @@ export default function EVStats() {
                       <span className="ev-month-label">{formatMonth(row.mes)}</span>
                       <div className="ev-month-bar-track">
                         <div className="ev-month-bar-fill" style={{ width: `${barPct}%` }}>
-                          {COST_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => {
+                          {translatedCostCats.filter((c) => visibleCats.has(c.key)).map((cat) => {
                             const catVal = row[cat.key] || 0
                             const catPct = total > 0 ? (catVal / total) * 100 : 0
                             if (catPct < 1) return null
@@ -751,7 +775,7 @@ export default function EVStats() {
                         </div>
                       </div>
                       <span className="ev-month-value">{formatBRL(
-                        COST_CATEGORIES.reduce(
+                        translatedCostCats.reduce(
                           (s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0),
                           0
                         )
@@ -770,7 +794,7 @@ export default function EVStats() {
                   <thead>
                     <tr>
                       <th>Mes</th>
-                      {VISIBLE_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((c) => (
+                      {translatedVisibleCats.filter((c) => visibleCats.has(c.key)).map((c) => (
                         <th key={c.key}>
                           <span className="ev-th-icon">{c.icon}</span>
                           {c.label}
@@ -781,14 +805,14 @@ export default function EVStats() {
                   </thead>
                   <tbody>
                     {[...data].reverse().map((row) => {
-                      const total = COST_CATEGORIES.reduce(
+                      const total = translatedCostCats.reduce(
                         (s, c) => s + (visibleCats.has(c.key) ? (row[c.key] || 0) : 0),
                         0
                       )
                       return (
                         <tr key={row.mes}>
                           <td className="ev-td-month">{formatMonth(row.mes)}</td>
-                          {VISIBLE_CATEGORIES.filter((c) => visibleCats.has(c.key)).map((cat) => (
+                          {translatedVisibleCats.filter((c) => visibleCats.has(c.key)).map((cat) => (
                             <td key={cat.key}>{formatCatValue(cat, row[cat.key] || 0)}</td>
                           ))}
                           <td className="ev-td-total">{formatBRL(total)}</td>
@@ -804,4 +828,12 @@ export default function EVStats() {
       </div>
     </>
   )
+}
+
+export const getStaticProps: GetStaticProps = async ({ locale }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+    },
+  }
 }

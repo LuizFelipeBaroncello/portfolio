@@ -6,7 +6,7 @@ import WindowMeshes from './WindowMeshes'
 import SunPatches from './SunPatches'
 import useIsometricControls from './useIsometricControls'
 
-const ELEVATION_ANGLE = 30 * (Math.PI / 180) // 30 degrees from horizontal
+const ELEVATION_ANGLE = 38 * (Math.PI / 180) // 38 degrees from horizontal
 const CAMERA_DISTANCE = 15
 
 function CameraController({ angle, zoom, center }) {
@@ -56,7 +56,7 @@ function SunLight({ sunPos, center }) {
   )
 }
 
-function Scene({ localCoords, walls, windowConfigs, sunPos, buildingHeight, cameraAngle, hideNearWalls }) {
+function Scene({ localCoords, walls, windowConfigs, sunPos, buildingHeight, cameraAngle }) {
   const center = useMemo(() => {
     let cx = 0, cz = 0
     for (const p of localCoords) {
@@ -79,7 +79,6 @@ function Scene({ localCoords, walls, windowConfigs, sunPos, buildingHeight, came
         windowConfigs={windowConfigs}
         buildingHeight={buildingHeight}
         cameraAngle={cameraAngle}
-        hideNearWalls={hideNearWalls}
       />
       <WindowMeshes walls={walls} windowConfigs={windowConfigs} />
       <SunPatches
@@ -92,7 +91,7 @@ function Scene({ localCoords, walls, windowConfigs, sunPos, buildingHeight, came
   )
 }
 
-export default function IsometricScene({ localCoords, walls, windowConfigs, sunPos, buildingHeight, hideNearWalls }) {
+export default function IsometricScene({ localCoords, walls, windowConfigs, sunPos, buildingHeight }) {
   const controls = useIsometricControls(8)
   const containerRef = useRef(null)
 
@@ -125,7 +124,7 @@ export default function IsometricScene({ localCoords, walls, windowConfigs, sunP
           far: 200,
           position: [10, 10, 10],
         }}
-        style={{ background: '#f0f0f0' }}
+        style={{ background: '#e8e5e0' }}
         gl={{ antialias: true, alpha: false }}
       >
         <CameraController angle={controls.angle} zoom={controls.zoom} center={center} />
@@ -136,7 +135,6 @@ export default function IsometricScene({ localCoords, walls, windowConfigs, sunP
           sunPos={sunPos}
           buildingHeight={buildingHeight}
           cameraAngle={controls.angle}
-          hideNearWalls={hideNearWalls}
         />
       </Canvas>
     </div>

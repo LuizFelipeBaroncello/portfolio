@@ -3,9 +3,9 @@ import * as THREE from 'three'
 
 function createFloorShape(localCoords) {
   const shape = new THREE.Shape()
-  shape.moveTo(localCoords[0].x, localCoords[0].z)
+  shape.moveTo(localCoords[0].x, -localCoords[0].z)
   for (let i = 1; i < localCoords.length; i++) {
-    shape.lineTo(localCoords[i].x, localCoords[i].z)
+    shape.lineTo(localCoords[i].x, -localCoords[i].z)
   }
   shape.closePath()
   return shape
@@ -26,7 +26,7 @@ function Floor({ localCoords }) {
   )
 }
 
-function WallMesh({ wall, buildingHeight, windowConfigs, cameraAngle, hideNearWalls }) {
+function WallMesh({ wall, buildingHeight, windowConfigs, cameraAngle }) {
   const { geometry, windowHoles } = useMemo(() => {
     const dx = wall.end.x - wall.start.x
     const dz = wall.end.z - wall.start.z
@@ -80,10 +80,10 @@ function WallMesh({ wall, buildingHeight, windowConfigs, cameraAngle, hideNearWa
     return dot > 0.1
   }, [wall.normal, cameraAngle])
 
-  // When hideNearWalls is on, completely hide camera-facing walls
-  if (hideNearWalls && facesCamera) return null
+  // Always hide camera-facing walls for proper cutaway effect
+  if (facesCamera) return null
 
-  const opacity = facesCamera ? 0.08 : 0.85
+  const opacity = 0.95
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
@@ -105,7 +105,7 @@ function WallMesh({ wall, buildingHeight, windowConfigs, cameraAngle, hideNearWa
   )
 }
 
-export default function RoomGeometry({ localCoords, walls, windowConfigs, buildingHeight, cameraAngle, hideNearWalls }) {
+export default function RoomGeometry({ localCoords, walls, windowConfigs, buildingHeight, cameraAngle }) {
   return (
     <group>
       <Floor localCoords={localCoords} />
@@ -116,7 +116,6 @@ export default function RoomGeometry({ localCoords, walls, windowConfigs, buildi
           buildingHeight={buildingHeight}
           windowConfigs={windowConfigs}
           cameraAngle={cameraAngle}
-          hideNearWalls={hideNearWalls}
         />
       ))}
     </group>

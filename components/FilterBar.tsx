@@ -1,16 +1,15 @@
-import ThemeToggle from './ThemeToggle'
+import type { CategoryFilter, FilterKey } from '../lib/cards-data'
 
 interface FilterBarProps {
-  filters: string[]
-  activeFilter: string
-  onSetFilter: (filter: string) => void
-  theme: string
-  onToggleTheme: () => void
+  filters: CategoryFilter[]
+  activeFilter: FilterKey
+  onSetFilter: (filter: FilterKey) => void
   logo: string
   contactHref: string
+  contactLabel: string
 }
 
-export default function FilterBar({ filters, activeFilter, onSetFilter, theme, onToggleTheme, logo, contactHref }: FilterBarProps) {
+export default function FilterBar({ filters, activeFilter, onSetFilter, logo, contactHref, contactLabel }: FilterBarProps) {
   return (
     <div className="filter-bar-wrapper">
       <span className="header-logo">{logo}</span>
@@ -18,18 +17,17 @@ export default function FilterBar({ filters, activeFilter, onSetFilter, theme, o
         <div className="filter-bar">
           {filters.map((filter) => (
             <button
-              key={filter}
-              className={`filter-tag${activeFilter === filter ? ' active' : ''}`}
-              onClick={() => onSetFilter(filter)}
+              key={filter.key}
+              className={`filter-tag${activeFilter === filter.key ? ' active' : ''}`}
+              onClick={() => onSetFilter(filter.key)}
             >
-              {filter}
+              {filter.label}
             </button>
           ))}
         </div>
-        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       </div>
       <a href={contactHref} className="contact-link">
-        Contact
+        {contactLabel}
       </a>
     </div>
   )

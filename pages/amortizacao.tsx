@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react'
 import Head from 'next/head'
+import { useTranslation } from 'next-i18next/pages'
+import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
+import type { GetStaticProps } from 'next'
 import { useTheme } from '../lib/use-theme'
 import {
   formatBRL,
@@ -59,6 +62,7 @@ interface Strategy {
 
 // ─── Main Page ───
 export default function Amortizacao() {
+  const { t } = useTranslation('common')
   const [theme, toggleTheme] = useTheme()
 
   // Form state
@@ -261,17 +265,16 @@ export default function Amortizacao() {
   return (
     <>
       <Head>
-        <title>Simulador de Amortizacao</title>
-        <meta name="description" content="Simulador de financiamento imobiliário com SAC/Price, planos de amortização extra, correção monetária e FGTS." />
-        <meta name="keywords" content="simulador, amortização, financiamento imobiliário, SAC, Price, FGTS, correção monetária" />
-        <meta property="og:title" content="Simulador de Amortização Imobiliária" />
-        <meta property="og:description" content="Simulador de financiamento imobiliário com SAC/Price, planos de amortização extra, correção monetária e FGTS." />
+        <title>{t('meta.amortizacao_title')}</title>
+        <meta name="description" content={t('meta.amortizacao_description')} />
+        <meta property="og:title" content={t('meta.amortizacao_title')} />
+        <meta property="og:description" content={t('meta.amortizacao_description')} />
         <meta property="og:image" content="/og-image.svg" />
         <meta property="og:url" content="https://luizfelipebaroncello.com/amortizacao" />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Simulador de Amortização Imobiliária" />
-        <meta name="twitter:description" content="Simulador de financiamento imobiliário com SAC/Price, planos de amortização extra, correção monetária e FGTS." />
+        <meta name="twitter:title" content={t('meta.amortizacao_title')} />
+        <meta name="twitter:description" content={t('meta.amortizacao_description')} />
         <meta name="twitter:image" content="/og-image.svg" />
       </Head>
 
@@ -1159,4 +1162,12 @@ function StrategyPlanAdder({ stratId, plans, installments, onAdd, onUpdate, onRe
       )}
     </>
   )
+}
+
+export const getStaticProps: GetStaticProps = async ({ locale }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+    },
+  }
 }

@@ -1,0 +1,54 @@
+{
+  "nav": {
+    "contact": "Contato",
+    "filters": {
+      "all": "Todos",
+      "about": "Sobre",
+      "projects": "Projetos",
+      "media": "Midia",
+      "config": "Config"
+    }
+  },
+  "bio": {
+    "intro": "Sou <strong>Luiz Felipe</strong>, Engenheiro de Software de Santa Catarina, Brasil. Atualmente no <strong>Mercado Livre</strong>. Experiente com <strong>Java</strong>, <strong>Spring</strong>, <strong>React</strong>, <strong>Microsservicos</strong> e <strong>Cloud</strong>."
+  },
+  "cards": {
+    "label_project": "Projeto",
+    "label_connect": "Conectar",
+    "visit_project": "Ver projeto",
+    "ev_title": "EV Dashboard",
+    "ev_description": "Rastreamento de custos e analise do carro eletrico com breakdown por categoria e tendencias.",
+    "amortizacao_title": "Simulador Amortizacao",
+    "amortizacao_description": "Simulador de financiamentos com SAC/Price, planos de amortizacao extra, correcao monetaria e seguro.",
+    "sun_map_title": "Mapa de Posicao Solar",
+    "sun_map_description": "Mapa 3D interativo • Sombras em tempo real • Calculo solar por localizacao. Visualize azimute e altitude solar para qualquer local e horario com edificios 3D e projecao de sombras vetoriais."
+  },
+  "meta": {
+    "home_title": "Luiz Felipe Baroncello — Engenheiro de Software",
+    "home_description": "Portfolio de Luiz Felipe Baroncello, Engenheiro de Software em Santa Catarina, Brasil. Projetos em Java, React, Spring, Microsservicos e Cloud.",
+    "ev_title": "EV Dashboard — Luiz Felipe Baroncello",
+    "ev_description": "Dashboard de rastreamento e analise de custos de veiculo eletrico.",
+    "amortizacao_title": "Simulador Amortizacao — Luiz Felipe Baroncello",
+    "amortizacao_description": "Simulador de financiamentos com sistemas SAC/Price.",
+    "sun_map_title": "Mapa de Posicao Solar — Luiz Felipe Baroncello",
+    "sun_map_description": "Mapa 3D interativo de posicao solar com projecao de sombras em tempo real."
+  },
+  "ev": {
+    "categories": {
+      "custo_carro": "Financiamento",
+      "combustivel_energia": "Energia",
+      "tag_estacionamento": "Tag / Estacionamento",
+      "limpeza": "Limpeza",
+      "documentos_seguro": "Documentos / Seguro",
+      "outros": "Outros",
+      "quilometragem": "Quilometragem"
+    },
+    "periods": {
+      "diaria": { "label": "Diaria", "suffix": "por dia" },
+      "mensal": { "label": "Mensal", "suffix": "por mes" },
+      "trimestral": { "label": "Trimestral", "suffix": "por trimestre" },
+      "semestral": { "label": "Semestral", "suffix": "por semestre" },
+      "anual": { "label": "Anual", "suffix": "por ano" }
+    }
+  }
+}

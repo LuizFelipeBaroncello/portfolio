@@ -1,0 +1,54 @@
+{
+  "nav": {
+    "contact": "Contact",
+    "filters": {
+      "all": "All",
+      "about": "About",
+      "projects": "Projects",
+      "media": "Media",
+      "config": "Config"
+    }
+  },
+  "bio": {
+    "intro": "I'm <strong>Luiz Felipe</strong>, a Software Engineer from Santa Catarina, Brazil. Currently at <strong>Mercado Livre</strong>. Experienced with <strong>Java</strong>, <strong>Spring</strong>, <strong>React</strong>, <strong>Microservices</strong> and <strong>Cloud</strong>."
+  },
+  "cards": {
+    "label_project": "Project",
+    "label_connect": "Connect",
+    "visit_project": "Visit project",
+    "ev_title": "EV Dashboard",
+    "ev_description": "Cost tracking and electric car analysis with breakdown by category and trends.",
+    "amortizacao_title": "Loan Simulator",
+    "amortizacao_description": "Loan simulator with SAC/Price, extra amortization plans, monetary correction and insurance.",
+    "sun_map_title": "Sun Position Map",
+    "sun_map_description": "Interactive 3D map • Real-time shadows • Solar calculation by location. Visualize solar azimuth and altitude for any location and time with 3D buildings and vector shadow projection."
+  },
+  "meta": {
+    "home_title": "Luiz Felipe Baroncello — Software Engineer",
+    "home_description": "Portfolio of Luiz Felipe Baroncello, Software Engineer from Santa Catarina, Brazil. Projects in Java, React, Spring, Microservices and Cloud.",
+    "ev_title": "EV Dashboard — Luiz Felipe Baroncello",
+    "ev_description": "Electric vehicle cost tracking and analysis dashboard.",
+    "amortizacao_title": "Loan Simulator — Luiz Felipe Baroncello",
+    "amortizacao_description": "Loan simulator with SAC/Price amortization systems.",
+    "sun_map_title": "Sun Position Map — Luiz Felipe Baroncello",
+    "sun_map_description": "Interactive 3D solar position map with real-time shadow projection."
+  },
+  "ev": {
+    "categories": {
+      "custo_carro": "Financing",
+      "combustivel_energia": "Energy",
+      "tag_estacionamento": "Toll / Parking",
+      "limpeza": "Cleaning",
+      "documentos_seguro": "Documents / Insurance",
+      "outros": "Others",
+      "quilometragem": "Mileage"
+    },
+    "periods": {
+      "diaria": { "label": "Daily", "suffix": "per day" },
+      "mensal": { "label": "Monthly", "suffix": "per month" },
+      "trimestral": { "label": "Quarterly", "suffix": "per quarter" },
+      "semestral": { "label": "Biannual", "suffix": "per semester" },
+      "anual": { "label": "Annual", "suffix": "per year" }
+    }
+  }
+}

@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Head from 'next/head'
+import { useTranslation } from 'next-i18next/pages'
+import { serverSideTranslations } from 'next-i18next/pages/serverSideTranslations'
+import type { GetStaticProps } from 'next'
 import { useTheme } from '../lib/use-theme'
 import {
   getSunPosition,
@@ -187,6 +190,7 @@ function SolarCompass({ sunPos, sunTimes, bearing, lat, lng, size = 140 }: Solar
 }
 
 export default function SunMap() {
+  const { t } = useTranslation('common')
   const [theme, toggleTheme] = useTheme()
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
@@ -741,17 +745,16 @@ export default function SunMap() {
   return (
     <div className="sm-page">
       <Head>
-        <title>Sun Position Map</title>
-        <meta name="description" content="Mapa interativo de posição solar 3D. Visualize a direção do sol, sombras e raios solares para qualquer local e horário." />
-        <meta name="keywords" content="sol, posição solar, mapa solar, sombras, 3D, sun map, azimute, altitude solar" />
-        <meta property="og:title" content="Sun Position Map — Mapa Solar 3D" />
-        <meta property="og:description" content="Mapa interativo de posição solar 3D. Visualize a direção do sol, sombras e raios solares para qualquer local e horário." />
+        <title>{t('meta.sun_map_title')}</title>
+        <meta name="description" content={t('meta.sun_map_description')} />
+        <meta property="og:title" content={t('meta.sun_map_title')} />
+        <meta property="og:description" content={t('meta.sun_map_description')} />
         <meta property="og:image" content="/og-image.svg" />
         <meta property="og:url" content="https://luizfelipebaroncello.com/sun-map" />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Sun Position Map — Mapa Solar 3D" />
-        <meta name="twitter:description" content="Mapa interativo de posição solar 3D. Visualize a direção do sol, sombras e raios solares para qualquer local e horário." />
+        <meta name="twitter:title" content={t('meta.sun_map_title')} />
+        <meta name="twitter:description" content={t('meta.sun_map_description')} />
         <meta name="twitter:image" content="/og-image.svg" />
       </Head>
 
@@ -1196,4 +1199,12 @@ export default function SunMap() {
       )}
     </div>
   )
+}
+
+export const getStaticProps: GetStaticProps = async ({ locale }) => {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale ?? 'en', ['common'])),
+    },
+  }
 }

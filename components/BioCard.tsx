@@ -1,8 +1,12 @@
+import { useTranslation } from 'next-i18next/pages'
+
 interface BioCardProps {
   isFiltered?: boolean
 }
 
 export default function BioCard({ isFiltered }: BioCardProps) {
+  const { t } = useTranslation('common')
+
   return (
     <div className={`card bio-card${isFiltered ? ' filtered-out' : ''}`}>
       <div className="card-inner">
@@ -13,14 +17,10 @@ export default function BioCard({ isFiltered }: BioCardProps) {
             className="bio-avatar"
             onMouseDown={(e) => e.stopPropagation()}
           />
-          <p className="bio-intro">
-            I&apos;m <strong className="bio-name">Luiz Felipe</strong>, a Software
-            Engineer from Santa Catarina, Brazil. Currently at{' '}
-            <strong>Mercado Livre</strong>. Experienced with{' '}
-            <strong>Java</strong>, <strong>Spring</strong>,{' '}
-            <strong>React</strong>, <strong>Microservices</strong>{' '}
-            and <strong>Cloud</strong>.
-          </p>
+          <p
+            className="bio-intro"
+            dangerouslySetInnerHTML={{ __html: t('bio.intro') }}
+          />
         </div>
       </div>
     </div>
