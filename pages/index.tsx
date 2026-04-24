@@ -14,6 +14,7 @@ import MusicCard from '../components/MusicCard'
 import ThemeCard from '../components/ThemeCard'
 import LanguageCard from '../components/LanguageCard'
 import { useTheme } from '../lib/use-theme'
+import { useIsMobile } from '../lib/use-is-mobile'
 import { getCardsData, getCategoryFilters, GRID_LAYOUTS, CardData, GridLayouts, FilterKey } from '../lib/cards-data'
 
 const ResponsiveGridLayout = dynamic(() => import('../components/BentoGrid'), { ssr: false })
@@ -39,6 +40,7 @@ export default function Home() {
   const [layouts, setLayouts] = useState<GridLayouts>(GRID_LAYOUTS)
   const [mounted, setMounted] = useState(false)
   const hasInteracted = useRef(false)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     setMounted(true)
@@ -218,14 +220,14 @@ export default function Home() {
 
         {mounted && (
           <ResponsiveGridLayout
-            className="bento-grid draggable"
+            className={`bento-grid${!isMobile ? ' draggable' : ''}`}
             layouts={filteredLayouts}
             breakpoints={{ lg: 1200, md: 900, sm: 0 }}
             cols={{ lg: 12, md: 8, sm: 4 }}
             rowHeight={180}
             margin={[16, 16]}
             containerPadding={[0, 0]}
-            isDraggable
+            isDraggable={!isMobile}
             isResizable={false}
             compactType="vertical"
             onLayoutChange={handleLayoutChange}

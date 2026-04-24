@@ -785,6 +785,10 @@ a {
   .page-container {
     padding: 24px 20px 60px;
   }
+
+  .draggable .card {
+    cursor: default;
+  }
 }
 
 @media (max-width: 600px) {
