@@ -67,14 +67,21 @@ export default function InteriorView({
   // Wall modifications: { [wallIndex]: { lengthDelta, offsetDelta } }
   const [wallMods, setWallMods] = useState({})
 
-  // Convert building to local meters
-  const { localCoords: baseLocalCoords, centroid } = latlngToLocalMeters(
+  // Convert building to local meters (used only for centroid when saving)
+  const { centroid } = latlngToLocalMeters(
     building.coordinates,
     building.coordinates[0][1]
   )
 
-  // Apply wall modifications to get adjusted coordinates
-  const localCoords = applyWallMods(baseLocalCoords, wallMods)
+  // Interior is always rendered as a fixed 5m x 5m square room
+  const ROOM_SIZE = 15
+  const half = ROOM_SIZE / 2
+  const localCoords = [
+    { x: -half, z: -half },
+    { x:  half, z: -half },
+    { x:  half, z:  half },
+    { x: -half, z:  half },
+  ]
   const walls = getWallSegments(localCoords, building.height)
 
   const addWindow = (wallIndex) => {
@@ -200,7 +207,7 @@ export default function InteriorView({
             </div>
           </div>
 
-          {selectedWallIndex !== null && (
+          {false && selectedWallIndex !== null && (
             <div className="sm-interior-section">
               <h4 className="sm-interior-section-title">
                 Ajustar &mdash; Parede {selectedWallIndex + 1}

@@ -127,9 +127,12 @@ export function getWallSegments(localCoords: Point2D[], buildingHeight: number):
     const dz = e.z - s.z
     const length = Math.sqrt(dx * dx + dz * dz)
 
-    // Outward normal (perpendicular to wall, pointing out)
-    const nx = -dz / length * orient
-    const nz = dx / length * orient
+    // Outward normal (perpendicular to wall, pointing out).
+    // Rotating edge direction by -90° gives the right-hand side of the edge,
+    // which is outward for CCW polygons (interior on the left). Multiply by
+    // orient to also handle CW-ordered polygons.
+    const nx = (dz / length) * orient
+    const nz = (-dx / length) * orient
 
     walls.push({
       wallIndex: i,

@@ -21,7 +21,7 @@ function Floor({ localCoords }) {
 
   return (
     <mesh geometry={geometry} receiveShadow>
-      <meshLambertMaterial color="#d4d0c8" />
+      <meshBasicMaterial color="#e0dcd0" side={THREE.DoubleSide} />
     </mesh>
   )
 }
@@ -88,8 +88,8 @@ function WallMesh({ wall, buildingHeight, windowConfigs, cameraAngle }) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
       <mesh geometry={geometry}>
-        <meshLambertMaterial
-          color="#c8c4b8"
+        <meshBasicMaterial
+          color="#d8d4c8"
           transparent
           opacity={opacity}
           side={THREE.DoubleSide}
