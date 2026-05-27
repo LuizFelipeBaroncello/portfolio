@@ -227,6 +227,35 @@
   margin-bottom: 12px;
 }
 
+.sm-geolocate-btn {
+  position: absolute;
+  right: 16px;
+  bottom: 200px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: all var(--transition-fast);
+}
+
+.sm-geolocate-btn:hover {
+  background: #fff;
+  color: var(--accent-orange);
+}
+
+[data-theme='light'] .sm-geolocate-btn {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
 .sm-search-wrapper {
   position: relative;
   flex: 1;

@@ -8,8 +8,8 @@ import { mapAltitudeToIntensity, mapAltitudeToColor, SunPosition } from './sun-c
 
 // ─── Map constants ────────────────────────────────────────────────────────────
 
-export const DEFAULT_LAT = -27.5934
-export const DEFAULT_LNG = -48.5828
+export const DEFAULT_LAT = -26.9941
+export const DEFAULT_LNG = -51.4090
 export const DEFAULT_ZOOM = 16
 
 export const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/positron'

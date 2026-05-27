@@ -209,7 +209,7 @@ export default function SunMap() {
   const [lat, setLat] = useState(DEFAULT_LAT)
   const [lng, setLng] = useState(DEFAULT_LNG)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [speed, setSpeed] = useState(5)
+  const [speed, setSpeed] = useState(120)
   const [searchQuery, setSearchQuery] = useState('')
   const [showInfo, setShowInfo] = useState(false)
   const [bearing, setBearing] = useState(-30)
@@ -256,7 +256,7 @@ export default function SunMap() {
   const sunTimesRef = useRef(null)
 
   // Night-skip toggle
-  const [skipNight, setSkipNight] = useState(false)
+  const [skipNight, setSkipNight] = useState(true)
   const skipNightRef = useRef(false)
 
   // Keep refs in sync
@@ -302,7 +302,7 @@ export default function SunMap() {
       try {
         map = new maplibregl.Map({
           container: container,
-          style: getMapStyle(theme),
+          style: getMapStyle('light'),
           center: [lng, lat],
           zoom: DEFAULT_ZOOM,
           pitch: 60,
@@ -381,18 +381,7 @@ export default function SunMap() {
     })
   }, [currentMinutes, yearProgress, lat, lng, customBuildings, mapLoaded])
 
-  // Switch map style on theme change
-  useEffect(() => {
-    if (!mapRef.current || !mapLoaded) return
-    const map = mapRef.current
-    const newStyle = getMapStyle(theme)
-
-    map.setStyle(newStyle)
-    map.once('style.load', () => {
-      addMapLayers(map, sunPos, customBuildings)
-      updateSunLighting(map, sunPos)
-    })
-  }, [theme])
+  // Map always stays in light mode regardless of the app theme.
 
   // Update custom buildings source when they change
   useEffect(() => {
@@ -645,6 +634,25 @@ export default function SunMap() {
     [searchQuery]
   )
 
+  // Fly to the user's current geolocation
+  const handleGeolocate = useCallback(() => {
+    if (!mapRef.current || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        mapRef.current.flyTo({
+          center: [pos.coords.longitude, pos.coords.latitude],
+          zoom: 16,
+          pitch: 60,
+          duration: 2000,
+        })
+      },
+      () => {
+        // permission denied / unavailable — ignore silently
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }, [])
+
   const handleDateChange = (e) => {
     const parts = e.target.value.split('-')
     const d = new Date(selectedDate)
@@ -761,6 +769,22 @@ export default function SunMap() {
 
       {/* Map */}
       <div ref={mapContainerRef} className="sm-map-container" />
+
+      {/* Go to my location */}
+      <button
+        className="sm-geolocate-btn"
+        onClick={handleGeolocate}
+        title="Ir para minha localização"
+        aria-label="Ir para minha localização"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="4" />
+          <line x1="12" y1="2" x2="12" y2="5" />
+          <line x1="12" y1="19" x2="12" y2="22" />
+          <line x1="2" y1="12" x2="5" y2="12" />
+          <line x1="19" y1="12" x2="22" y2="12" />
+        </svg>
+      </button>
 
       {/* Sky gradient overlay */}
       <div
